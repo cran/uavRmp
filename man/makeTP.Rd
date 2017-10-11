@@ -4,7 +4,7 @@
 \alias{makeTP}
 \title{Flight Track Planning tool}
 \usage{
-makeTP(projectDir = "~", locationName = "treePos",
+makeTP(projectDir = tempdir(), locationName = "treePos",
   missionTrackList = NULL, launchPos = c(8.772055, 50.814689),
   demFn = NULL, flightAltitude = 100, climbDist = 7.5,
   aboveTreeAlt = 15, circleRadius = 1, takeOffAlt = 50,
@@ -13,7 +13,7 @@ makeTP(projectDir = "~", locationName = "treePos",
   uavType = "solo", cameraType = "MAPIR2", copy = FALSE)
 }
 \arguments{
-\item{projectDir}{\code{character} path to the main folder where several projects can be hosted, default is \code{"~"}}
+\item{projectDir}{\code{character} path to the main folder where several projects can be hosted, default is \code{tempdir()}}
 
 \item{locationName}{\code{character} base name string of the mission, default is \code{"treePos"}}
 
