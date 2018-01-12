@@ -1,8 +1,8 @@
 Package: uavRmp
 Type: Package
 Title: UAV Mission Planner
-Version: 0.5.1
-Date: 2017-10-10
+Version: 0.5.3
+Date: 2017-11-20
 Authors@R: c(person("Chris", "Reudenbach", email = "reudenbach@uni-marburg.de", role = c("cre", "aut")),
              person("Sebastian", "Richter", role = c("ctb")),
              person("Lars", "Opgenoorth",  role = c("ctb")),
@@ -19,17 +19,17 @@ License: GPL (>= 3) | file LICENSE
 Depends: R (>= 3.1.0)
 Imports: stringr, sp, raster, htmlwidgets, htmltools, rgdal, rgeos,
         gdalUtils, geosphere, tools, maptools, log4r, zoo, data.table,
-        spatial.tools, devtools, sf, roxygen2, methods
+        spatial.tools, devtools, sf, roxygen2, methods, brew
 RoxygenNote: 6.0.1
 SystemRequirements: GNU make
 Suggests: knitr, rmarkdown, mapview
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2017-10-11 08:02:06 UTC; creu
+Packaged: 2018-01-11 21:39:43 UTC; creu
 Author: Chris Reudenbach [cre, aut],
   Sebastian Richter [ctb],
   Lars Opgenoorth [ctb],
   Florian Detsch [ctb],
   Hanna Meyer [ctb]
 Repository: CRAN
-Date/Publication: 2017-10-11 08:33:55 UTC
+Date/Publication: 2018-01-13 00:23:34 UTC
