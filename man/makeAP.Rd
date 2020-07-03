@@ -4,16 +4,38 @@
 \alias{makeAP}
 \title{UAV Mission Planning tool for autonomous monitoring flight tasks with respect to DSM/DEM, orthophoto data retrieval.}
 \usage{
-makeAP(projectDir = tempdir(), locationName = "flightArea",
-  surveyArea = NULL, flightAltitude = 100, launchAltitude = NULL,
-  followSurface = FALSE, followSurfaceRes = NULL, demFn = NULL,
-  altFilter = 1, horizonFilter = 30, flightPlanMode = "track",
-  presetFlightTask = "remote", overlap = 0.8, maxSpeed = 20,
-  maxFlightTime = 10, picRate = 2, windCondition = 0,
-  uavType = "solo", cameraType = "MAPIR2", cmd = 16,
-  uavViewDir = 0, djiBasic = c(0, 0, 0, -90, 0), dA = FALSE,
-  heatMap = FALSE, picFootprint = FALSE, rcRange = NULL,
-  copy = FALSE, runDir = tempdir())
+makeAP(
+  projectDir = tempdir(),
+  locationName = "flightArea",
+  surveyArea = NULL,
+  flightAltitude = 100,
+  launchAltitude = NULL,
+  followSurface = FALSE,
+  followSurfaceRes = NULL,
+  demFn = NULL,
+  altFilter = 1,
+  horizonFilter = 30,
+  flightPlanMode = "track",
+  useMP = FALSE,
+  presetFlightTask = "remote",
+  overlap = 0.8,
+  maxSpeed = 20,
+  maxFlightTime = 10,
+  picRate = 2,
+  windCondition = 0,
+  uavType = "pixhawk",
+  cameraType = "MAPIR2",
+  cmd = 16,
+  uavViewDir = 0,
+  djiBasic = c(0, 0, 0, -90, 0),
+  dA = FALSE,
+  heatMap = FALSE,
+  picFootprint = FALSE,
+  rcRange = NULL,
+  copy = FALSE,
+  runDir = tempdir(),
+  gdalLink = NULL
+)
 }
 \arguments{
 \item{projectDir}{\code{character} path to the main folder where several locations can be hosted, default is \code{tempdir()}}
@@ -52,6 +74,8 @@ Further explanation at seealso}
 
 \item{flightPlanMode}{type of flight plan. Available are: \code{"waypoints"},
 \code{"track"}, \code{"manual"}.}
+
+\item{useMP}{default is FALSE switches to use a missionplanner/Qgroundcontrolplanner survey as planning base}
 
 \item{presetFlightTask}{(DJI only) strongly recommended to use "remote"
        \cr
@@ -103,22 +127,24 @@ By default it is set to (\code{= 0.0}).
 \item{copy}{copy switch}
 
 \item{runDir}{\code{character} runtime folder}
+
+\item{gdalLink}{link to GDAL binaries}
 }
 \description{
 The basic idea is to provide an easy to use workflow for controlling rtf-UAVs for planning autonomous surveys to retrieve aerial data sets.
 }
 \details{
 makeAP (make aerial plan) creates either intermediate flight control files for the
-  DJI phantom x UAVs or ready to upload control files for the 3DR Solo. The
+  DJI phantom x UAVs or ready to upload control files for the 3DR Solo/PixHawk flightcontroller. The
   DJI control files are designed for using with the proprietary litchi flight
-  control app exchange format, while the 3DR Solo files are using the MAVLINK
+  control app exchange format, while the 3DR Solo/PixHawk flightcontroller files are using the MAVLINK
   common message set, that is used by the PixHawk flight controller family.
   Both are implemented very rudimentarily.\cr\cr DJI:\cr The reason using DJI
   is their absolute straightforward usage. Everybody can fly with a DJI but
-  the price is a hermetically closed system. Only the  litchi app provides
+  the price is a more or less closed system at least in the low budget segement. There are workarounds like the litchi app that provides
   additionally to a cloud based mission planner an offline/standalone
   interface to upload a CSV formated way point file for autonomous flights to
-  the Phantom.\cr\cr PixHawk/3DR Solo:\cr The open uav community is focused
+  the Phantom.\cr\cr PixHawk flightcontroller/3DR Solo:\cr The open uav community is focused
   on the PixHawk autopilot unit and the Mission Planner software. It is well
   documented and several APIs are provided. Nevertheless a high resolution 
   terrain following flight planning tool for  autonomous obstacle avoiding flight missions
@@ -140,9 +166,8 @@ https://gisma.github.io/
 }
 
 \examples{
-
 \dontrun{
-# Depending on the arguments, the following spatial data sets can returned
+# Depending on the arguments, the following spatial data sets can be returned:
 
 # lp      the planned launching position of the UAV.
 # wp      waypoints inclusive all information
@@ -166,8 +191,8 @@ tutorial_flightArea <- system.file("extdata", "flightarea.kml", package = "uavRm
 fp <- makeAP(surveyArea = tutorial_flightArea,
               demFn = demFn)
               
-## (3) typical real case scenario
-##     Flight altitudes BELOW 50 m is ambitious and risky
+## (3) typical real case scenario (1)
+##     A flight altitudes BELOW 50 m is ambitious and risky
 ##     You have to use a high quality high resulution DSM
 ##     (here simulated with a standard DEM)
 
@@ -176,17 +201,41 @@ fp <- makeAP(surveyArea=tutorial_flightArea,
            flightAltitude = 45,
            demFn = demFn,
            windCondition = 1,
-           uavType = "solo",
+           uavType = "pixhawk",
            followSurfaceRes = 5,
            altFilter = .75)
 
-## (4) view results
+
+## (4) typical real case scenario (2)
+##     A flight altitudes BELOW 50 m is ambitious and risky
+##     You have to use a high quality high resulution DSM
+##     (here simulated with a standard DEM)
+##     This examples used a filight panning from the QGroundcotrol Survey planning tool
+##     It also used the calculations for camera footprints and so on
+##     NOTE EXPERIMENTAL 
+
+demFn <- system.file("extdata", "mrbiko.tif", package = "uavRmp")
+tutorial_flightArea <- system.file("extdata", "qgc_survey.plan", package = "uavRmp")
+fp <- makeAP(surveyArea=tutorial_flightArea,
+            useMP = TRUE,
+            followSurface = TRUE,
+            demFn = demFn,
+            windCondition = 1,
+            uavType = "pixhawk",
+            followSurfaceRes = 5,
+             altFilter = .75)
+
+
+## (5) view results
+
 mapview::mapview(fp$wp,cex=4, lwd=0.5)+
 mapview::mapview(fp$lp,color = "red", lwd=1,cex=4)+
 mapview::mapview(fp$fA,color="blue", alpha.regions = 0.1,lwd=0.5)+
 mapview::mapview(fp$oDEM,col=terrain.colors(256))
 
-## (5) digitize flight area using the small "onboard" tool vecDraw()
+
+
+## (6) digitize flight area using the small "onboard" tool vecDraw()
 ##     save vectors as "kml" or "json" files
 ##     provide full filename  +  extension!
 
@@ -195,7 +244,7 @@ vecDraw(preset="uav")
 }
 }
 \seealso{
-The underlying concept, a tutorial and a field guid can be found in the package vignettes. See \code{browseVignettes("uavRmp")} or \code{vignette(package =
+The underlying concept, a tutorial and a field guide can be found in the package vignettes. See \code{browseVignettes("uavRmp")} or \code{vignette(package =
   "uavRmp")} or 
-  at \href{https://gisma.github.io/uavRmp/uavRmp_1.html}{Github uavRmp manual}).
+  at \href{https://gisma.github.io/uavRmp/articles/uavRmp_1.html}{Github uavRmp manual}).
 }

@@ -1,3 +1,4 @@
+
 #' digitizing vector features using a simple leaflet base map
 #'
 #' @description  vecDraw is designed for straightforward digitizing of simple geometries without adding attributes. It provides a bunch of leaflet base maps and optionally a sf* object can be loaded for orientation. 
@@ -22,7 +23,7 @@
 #' 
 #'
 #' @examples
-
+#' \dontrun{
 #' # fully featured without overlay
 #' require(mapview)
 #' 
@@ -36,7 +37,7 @@
 #'   
 #' # preset for digitizing simple rectangles extents
 #' vecDraw(preset="ext",overlay = m)
-
+#'}
 #' @export vecDraw
 
 vecDraw <- function(mapCenter=NULL,
@@ -79,16 +80,22 @@ vecDraw <- function(mapCenter=NULL,
   tmpPath<- createTempDataTransfer()
   
   if (!is.null(overlay)){
+
+    if  (class(overlay[1]) == "character"){stop("overlay has to be a sp* object") }
     
-    if (class(overlay)  %in% c("SpatialPointsDataFrame","SpatialLinesDataFrame","SpatialLines","SpatialPoints")) {
+    if (class(overlay[1])  %in% c("SpatialPointsDataFrame","SpatialLinesDataFrame","SpatialLines","SpatialPoints")) {
       #e <- as(raster::extent(overlay), "SpatialPolygons")
       #e <- sp::SpatialPolygonsDataFrame(e, data.frame(ID="overlay"))
-      proj4string(overlay) <- sp::proj4string(overlay)
+      sp::proj4string(overlay) <- sp::proj4string(overlay)
       overlay<-sp::spTransform(overlay,CRSobj = sp::CRS("+init=epsg:4326"))
-    } else if  (class(overlay)=="SpatialPolygonsDataFrame") {
+    } 
+    if  (class(overlay[1])=="SpatialPolygonsDataFrame") {
       overlay<-sp::spTransform(overlay,CRSobj = sp::CRS("+proj=longlat +datum=WGS84 +no_defs"))
       #overlay <- sp::SpatialPolygonsDataFrame(overlay, data.frame(ID="overlay"))
-    } else if  (class(overlay == "character")){stop("overlay has to be a sp* object") }
+    } 
+    
+    if  (class(overlay[1])!="sf") {
+
     
     rgdal::writeOGR(overlay, paste(tmpPath, "jsondata", sep=.Platform$file.sep), "OGRGeoJSON", driver="GeoJSON")
     
@@ -118,8 +125,25 @@ vecDraw <- function(mapCenter=NULL,
     mapCenter<-c(raster::extent(overlay)[3]+raster::extent(overlay)[4]-raster::extent(overlay)[3],raster::extent(overlay)[1]+raster::extent(overlay)[2]-raster::extent(overlay)[1])
     #features<-overlay
     
-  }  else {jsondata<-0}
-  
+    }  else if (class(overlay[1])=="sf") {
+    #  sf::sf::st_write(overlay, dsn = paste(tmpPath, "jsondata", sep=.Platform$file.sep), layer = paste(tmpPath, "jsondata", sep=.Platform$file.sep), driver = "Esri", update = TRUE)
+      sf::st_write(overlay, dsn = paste(tmpPath, "jsondata.shp", sep=.Platform$file.sep), layer = paste(tmpPath, "jsondata.shp", sep=.Platform$file.sep), update = TRUE)
+      
+      conn<-file(paste(tmpPath, "jsondata", sep=.Platform$file.sep))
+      lns <- readLines(paste(tmpPath, "jsondata", sep=.Platform$file.sep))
+      
+      text1 <-paste0('var jsondata = ')
+      text2 <- ';'
+      # open the file and read in all the lines 
+ 
+    # concatenate the old file with the new text
+    newjson <- c(text1,lns[1:length(lns)],text2) 
+    writeLines(newjson, conn, sep="\n")
+    close(conn)
+ 
+      jsondata<-0
+      }
+  } else {jsondata<-0}
   if ( preset == "uav") {
     if (is.null(mapCenter)){
       mapCenter<-c(50.80801,8.72993)}
@@ -157,7 +181,7 @@ vecDraw <- function(mapCenter=NULL,
     zoom<-zoom
     line<-line
     maplayer=c("OpenStreetMap","CartoDB.Positron","Esri.WorldImagery","Thunderforest.Landscape","OpenTopoMap")
-    overlay=overlay
+    overlay=NULL
     rectangle<-rectangle
     poly<-poly
     circle<-circle
@@ -184,7 +208,7 @@ vecDraw <- function(mapCenter=NULL,
             features=features,
             layer=maplayer,
             zoom = zoom,
-            html = getPopupStyle(),
+          #  html = getPopupStyle(),
             #refpoint=refpoint,
             line=line,
             rectangle=rectangle,
@@ -208,70 +232,7 @@ vecDraw <- function(mapCenter=NULL,
 }
 
 
-# create dependencies
-digiDependencies <- function(tmpPath) {
-  
-  data_dir <- paste0(tmpPath,sep=.Platform$file.sep)
-  
-  
-  list(
-    htmltools::htmlDependency(name = "crs",
-                              version = "1",
-                              src = c(file = tmpPath),
-                              script = list("crs.js")),
-    
-    htmltools::htmlDependency(name = "jsondata",
-                              version = "1",
-                              src = c(file = tmpPath),
-                              script = list("jsondata")),
-    
-    htmltools::htmlDependency(
-      name = "leaflet-draw",
-      version= "0.7.3",
-      src = c(file = tmpPath),
-      script = list("leaflet.draw.js"),
-      stylesheet=list("leaflet.draw.css")
-    )
-    
-  )
-}
 
-###  creates temporary file structure for data transfer =================================================
-createTempDataTransfer <- function (){
-  tmpPath <- tempfile(pattern="007")
-  dir.create(tmpPath)
-  return(tmpPath)
-}
 
-vecDrawInternal <- function(tmpPath, x = NULL) {
-  deps<-digiDependencies(tmpPath) 
-  sizing = htmlwidgets::sizingPolicy(
-    browser.fill = TRUE,
-    viewer.fill = TRUE,
-    viewer.padding = 5
-  )
-  # create widget
-  htmlwidgets::createWidget(
-    name = 'vecDraw',
-    x,
-    dependencies = deps,
-    sizingPolicy = sizing,
-    package = 'uavRmp'
-  )
-}
 
-### Widget output function for use in Shiny =================================================
-#
-vecDrawOutput <- function(outputId, width = '100%', height = '800px') {
-  htmlwidgets::shinyWidgetOutput(outputId, 'vecDraw', width, height, package = 'uavRmp')
-}
 
-### Widget render function for use in Shiny =================================================
-#
-rendervecDraw<- function(expr, env = parent.frame(), quoted = FALSE) {
-  projViewOutput<-NULL
-  if (!quoted) {
-    expr <- substitute(expr)
-  } # force quoted
-  htmlwidgets::shinyRenderWidget(expr, projViewOutput, env, quoted = TRUE)
-}

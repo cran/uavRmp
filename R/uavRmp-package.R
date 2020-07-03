@@ -7,36 +7,18 @@
 #' @name uavRmp
 #' @docType package
 #' @title UAV Mission Planner
-#' @author Chris Reudenbach Lars Opgenoorth Sebastian Richter Florian Detsch Hanna Meyer
+#' @author Chris Reudenbach Lars Opgenoorth Sebastian Richter Florian Detsch Hanna Meyer Marvin Ludwig
 #' \cr
 #' \emph{Maintainer:} Chris Reudenbach \email{reudenbach@@uni-marburg.de}
 #' 
 #' 
 #'
-#' @import stringr 
-#' @import zoo
-#' @import sp
-#' @import raster
-#' @import htmlwidgets
-#' @import htmltools
-#' @import rgeos
-#' @import rgdal
-#' @import tools
-#' @import maptools
-#' @import log4r
-#' @import devtools
-#' @import roxygen2
-#' @import sf 
-#' @import methods
-#' @import devtools
-#' @import brew
-#' @importFrom gdalUtils gdalinfo
-#' @importFrom gdalUtils gdalwarp
+
+#' @importFrom rlist list.cbind
+#' @importFrom link2GI linkGDAL
 #' @importFrom geosphere bearing
 #' @importFrom geosphere distGeo
 #' @importFrom geosphere destPoint
-#' @importFrom data.table fread
-#' @importFrom spatial.tools create_blank_raster 
 #' @import log4r
 #' @keywords package
 #' 
@@ -83,6 +65,15 @@ NULL
 #' @name tutdata_flightarea
 #' @title Flight area planning example data 
 #' @description Flight area planning example data as typically needed for planning an autonomous survey flight task
+#' @keywords datasets
+#' @source \code{Faculty of Geography Marburg}
+NULL
+
+#' Flight area planning Qgroundcontrol survey data 
+#' @docType data
+#' @name qgc_survey
+#' @title Flight area planning Qgroundcontrol survey data 
+#' @description Flight area planning example data as typically needed for planning an autonomous survey flight task. The task is planned with the QGroundcontrol survey tool.
 #' @keywords datasets
 #' @source \code{Faculty of Geography Marburg}
 NULL

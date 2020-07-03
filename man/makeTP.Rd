@@ -4,14 +4,28 @@
 \alias{makeTP}
 \title{Flight Track Planning tool}
 \usage{
-makeTP(projectDir = tempdir(), locationName = "treePos",
-  missionTrackList = NULL, launchPos = c(8.772055, 50.814689),
-  demFn = NULL, flightAltitude = 100, climbDist = 7.5,
-  aboveTreeAlt = 15, circleRadius = 1, takeOffAlt = 50,
-  presetFlightTask = "remote", maxSpeed = 25, followSurfaceRes = 5,
-  altFilter = 0.5, windCondition = 1, launchAltitude = -9999,
-  uavType = "solo", cameraType = "MAPIR2", copy = FALSE,
-  runDir = "")
+makeTP(
+  projectDir = tempdir(),
+  locationName = "treePos",
+  missionTrackList = NULL,
+  launchPos = c(8.772055, 50.814689),
+  demFn = NULL,
+  flightAltitude = 100,
+  climbDist = 7.5,
+  aboveTreeAlt = 15,
+  circleRadius = 1,
+  takeOffAlt = 50,
+  presetFlightTask = "remote",
+  maxSpeed = 25,
+  followSurfaceRes = 5,
+  altFilter = 0.5,
+  windCondition = 1,
+  launchAltitude = -9999,
+  uavType = "pixhawk",
+  cameraType = "MAPIR2",
+  copy = FALSE,
+  runDir = ""
+)
 }
 \arguments{
 \item{projectDir}{\code{character} path to the main folder where several projects can be hosted, default is \code{tempdir()}}
@@ -55,7 +69,7 @@ For \code{flightPlanMode = "waypoint"} camera actions (DJI only EXPERIMENTAL) ar
 
 \item{launchAltitude}{\code{numeric} altitude of launch position. If set to \code{-9999} a DEM is required for extracting the MSL, default is \code{-9999}}
 
-\item{uavType}{\code{character}  type of UAV. Currently "djip3" and "solo" are supported, default is \code{"solo"}}
+\item{uavType}{\code{character}  type of UAV. Currently "djip3" and "pixhawk" are supported, default is \code{"pixhawk"}}
 
 \item{cameraType}{\code{character}, default is \code{"MAPIR2"}.}
 
@@ -73,7 +87,7 @@ dsmFn <- system.file("extdata", "mrbiko.tif", package = "uavRmp")
 ## (2) make position flight plan
 makeTP  <-  makeTP(missionTrackList= tutorial_flightArea,
                   demFn = dsmFn,
-                  uavType = "solo",
+                  uavType = "pixhawk",
                   launchPos = c(8.679,50.856))
 }
 }

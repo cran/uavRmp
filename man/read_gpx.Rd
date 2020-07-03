@@ -4,8 +4,10 @@
 \alias{read_gpx}
 \title{Read GPX file}
 \usage{
-read_gpx(file, layers = c("waypoints", "tracks", "routes",
-  "track_points", "route_points"))
+read_gpx(
+  file,
+  layers = c("waypoints", "tracks", "routes", "track_points", "route_points")
+)
 }
 \arguments{
 \item{file}{a GPX filename (including directory)}
@@ -22,6 +24,7 @@ Read a GPX file. By default, it reads all possible GPX layers, and only returns 
 cloned from tmap
 }
 \examples{
+\dontrun{
 ## for visualisation we are using mapview
 require(mapview)
 ## assign  GPX file
@@ -31,7 +34,7 @@ gpxFN <- system.file("extdata", "flighttrack.gpx", package = "uavRmp")
 gpx <- read_gpx(gpxFN, layers=c("tracks"))
 
 ## plot it
-mapview::mapview(gpx)
+plot(gpx$geometry)
 
-
+}
 }

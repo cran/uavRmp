@@ -4,12 +4,25 @@
 \alias{vecDraw}
 \title{digitizing vector features using a simple leaflet base map}
 \usage{
-vecDraw(mapCenter = NULL, zoom = 15, line = TRUE, rectangle = TRUE,
-  poly = TRUE, circle = TRUE, point = TRUE, remove = TRUE,
-  position = "topright", maplayer = c("CartoDB.Positron",
-  "OpenStreetMap", "Esri.WorldImagery", "Thunderforest.Landscape",
-  "OpenTopoMap"), overlay = NULL, preset = "all", locPreset = "muf",
-  cex = 10, lwd = 2, opacity = 0.7)
+vecDraw(
+  mapCenter = NULL,
+  zoom = 15,
+  line = TRUE,
+  rectangle = TRUE,
+  poly = TRUE,
+  circle = TRUE,
+  point = TRUE,
+  remove = TRUE,
+  position = "topright",
+  maplayer = c("CartoDB.Positron", "OpenStreetMap", "Esri.WorldImagery",
+    "Thunderforest.Landscape", "OpenTopoMap"),
+  overlay = NULL,
+  preset = "all",
+  locPreset = "muf",
+  cex = 10,
+  lwd = 2,
+  opacity = 0.7
+)
 }
 \arguments{
 \item{mapCenter}{center of the leaflet map}
@@ -51,6 +64,7 @@ vecDraw is designed for straightforward digitizing of simple geometries without 
 Yu can either save the digitized object to a json (JS) or kml (KML) file.
 }
 \examples{
+\dontrun{
 # fully featured without overlay
 require(mapview)
 
@@ -64,4 +78,5 @@ vecDraw(overlay = m, preset = "uav")
   
 # preset for digitizing simple rectangles extents
 vecDraw(preset="ext",overlay = m)
+}
 }

@@ -1,11 +1,11 @@
 Package: uavRmp
 Type: Package
 Title: UAV Mission Planner
-Version: 0.5.4
-Date: 2018-10-20
+Version: 0.5.7
+Date: 2020-07-03
 Authors@R: c(person("Chris", "Reudenbach", email = "reudenbach@uni-marburg.de", role = c("cre", "aut")),
+             person("Marvin", "Ludwig", role = c("ctb")),
              person("Sebastian", "Richter", role = c("ctb")),
-             person("Lars", "Opgenoorth",  role = c("ctb")),
              person("Florian", "Detsch", role = c("ctb")),
              person("Hanna", "Meyer", role = c("ctb"))
              )
@@ -17,19 +17,20 @@ BugReports: https://github.com/gisma/uavRmp/issues
 LazyData: TRUE
 License: GPL (>= 3) | file LICENSE
 Depends: R (>= 3.1.0)
-Imports: stringr, sp, raster, htmlwidgets, htmltools, rgdal, rgeos,
-        gdalUtils, geosphere, tools, maptools, log4r, zoo, data.table,
-        spatial.tools, devtools, sf, roxygen2, methods, brew
-RoxygenNote: 6.1.0
+Imports: sp, sf, raster, rgdal, rgeos, geosphere, tools, log4r, zoo,
+        methods, brew, exifr, link2GI, data.table, jsonlite, rlist,
+        rlang
+RoxygenNote: 7.1.0
 SystemRequirements: GNU make
-Suggests: knitr, rmarkdown, mapview
+Suggests: knitr, rmarkdown, markdown, mapview, grDevices, stringr,
+        htmltools, htmlwidgets, maptools
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2018-10-27 05:51:33 UTC; creu
+Packaged: 2020-07-03 13:00:34 UTC; creu
 Author: Chris Reudenbach [cre, aut],
+  Marvin Ludwig [ctb],
   Sebastian Richter [ctb],
-  Lars Opgenoorth [ctb],
   Florian Detsch [ctb],
   Hanna Meyer [ctb]
 Repository: CRAN
-Date/Publication: 2018-10-28 18:10:03 UTC
+Date/Publication: 2020-07-03 16:40:03 UTC

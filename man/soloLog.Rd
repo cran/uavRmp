@@ -4,9 +4,15 @@
 \alias{soloLog}
 \title{Download, reorganize and export the binary log files from 3DR Solo Pixhawk controller or the telemetry log files from the Solo radio control unit}
 \usage{
-soloLog(logFileSample = "recent", logSource = "rc",
-  logDest = tempdir(), downloadOnly = FALSE, netWarn = FALSE,
-  renameFiles = TRUE, makeSP = FALSE)
+soloLog(
+  logFileSample = "recent",
+  logSource = "rc",
+  logDest = tempdir(),
+  downloadOnly = FALSE,
+  netWarn = FALSE,
+  renameFiles = TRUE,
+  makeSP = FALSE
+)
 }
 \arguments{
 \item{logFileSample}{\code{character} , options are:  \code{recent} download the most recent logfile,  \code{all} downloads all logfiles, or a plain number e.g. \code{2} for a specific logfile. Note the telemetry logfiles are numbering from 1 to 9 only, the most recent one is not numbered. The binary logfiles from the pixhawk are numbering continously but only the last 50 files or so will exist.}
@@ -24,7 +30,7 @@ soloLog(logFileSample = "recent", logSource = "rc",
 \item{makeSP}{\code{logical} wether returning an \code{sp} object from the gpx files or not, default is FALSE}
 }
 \description{
-Wraps the mavtogpx.py converter as provided by the \href{http://python.dronekit.io/}{dronkit library}). It downloads and optionally converts the most important 3DR Solo logfiles. Optionally you may import the geometries and data as \code{sp} object.
+Wraps the mavtogpx.py converter as provided by the \href{https://github.com/dronekit/dronekit-python}{dronkit library}). It downloads and optionally converts the most important 3DR Solo logfiles. Optionally you may import the geometries and data as \code{sp} object.
 }
 \note{
 for using the Solo stuff is tested only for Linux and the bash shell under Windows 10. You need to install the following python libs: \cr 

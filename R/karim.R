@@ -13,6 +13,7 @@ if (!isGeneric('read_gpx ')) {
 #' @return  if the layer has any features a sp object is returned.
 #' @note cloned from tmap
 #' @examples 
+#' \dontrun{
 #' ## for visualisation we are using mapview
 #' require(mapview)
 #' ## assign  GPX file
@@ -22,31 +23,31 @@ if (!isGeneric('read_gpx ')) {
 #' gpx <- read_gpx(gpxFN, layers=c("tracks"))
 #' 
 #' ## plot it
-#' mapview::mapview(gpx)
+#' plot(gpx$geometry)
 #' 
-#' 
+#' }
 #' @export read_gpx
 
 read_gpx <- function(file, layers=c("waypoints", "tracks", "routes", "track_points", "route_points")) {
   if (!all(layers %in% c("waypoints", "tracks", "routes", "track_points", "route_points"))) stop("Incorrect layer(s)", call. = FALSE)
   
-  # check if features exist per layer
-  suppressWarnings(hasF <- sapply(layers, function(l) {
-    ogrInfo(dsn = file, layer=l)$have_features
-  }))
+  # # check if features exist per layer
+  # suppressWarnings(hasF <- sapply(layers, function(l) {
+  #   ogrInfo(dsn = file, layer=l)$have_features
+  # }))
   
-  if (!any(hasF)) stop("None of the layer(s) has any features.", call. = FALSE)
-  
-  res <- lapply(layers[hasF], function(l) {
-    readOGR(dsn = file, layer=l, verbose=FALSE)
-  })
-  names(res) <- layers[hasF]
-  
-  if (sum(hasF)==1) {
-    res[[1]]
-  } else {
-    res
-  }
+  # if (!any(hasF)) stop("None of the layer(s) has any features.", call. = FALSE)
+  # 
+  # res <- lapply(layers[hasF], function(l) {
+  #   sf::st_read( file,layer=l,quiet =TRUE)
+  # })
+  # names(res) <- layers[hasF]
+  # 
+  # if (sum(hasF)==1) {
+  #   res[[1]]
+  # } else {
+  #   res
+  # }
 }
 
 
@@ -97,22 +98,25 @@ comp_ll_proj4 <- function(x) {
 #' ## creating sp spatial point object
 #' line <- sp_line(c(8.770367,8.771161,8.771536),
 #'                 c(50.815172,50.814743,50.814875),
-#'                 ID="go for it",
-#'                 runDir=runDir)
+#'                 runDir=tempdir())
 #' 
 #' ## plot it
 #' raster::plot(line)
 #' 
 sp_line <- function(Y_coords,
                     X_coords,
-                    ID,
+                    ID = "ID",
                     proj4="+proj=longlat +datum=WGS84 +no_defs",
                     export=FALSE,
                     runDir) {   
-  line <- SpatialLines(list(Lines(Line(cbind(Y_coords,X_coords)), ID = ID)))
-  sp::proj4string(line) <- CRS(proj4)
+ ## x = st_linestring(matrix(cbind(Y_coords,X_coords),ncol=2,byrow=TRUE))
+##  line<-st_as_sfc(line)
+##  line <- sf::st_set_crs(line, CRS(proj4))
+  line <- sp::SpatialLines(list(sp::Lines(sp::Line(cbind(Y_coords,X_coords)), ID = ID)))
+  sp::proj4string(line) <- sp::CRS(proj4)
   if (export) {
-    writeLinesShape(line,file.path(runDir,paste0(ID,"home.shp")))
+  ##  sf::st_write(line,file.path(runDir,paste0(ID,"home.gpkg")))
+   maptools::writeLinesShape(line,file.path(runDir,paste0(ID,"home.shp")))
   }
   return(line)
 }
@@ -141,10 +145,10 @@ sp_point <- function(lon,
                      runDir=runDir) {
   point = cbind(lon,lat)
   point = sp::SpatialPoints(point)
-  point = SpatialPointsDataFrame(point, as.data.frame(ID))
-  sp::proj4string(point) <- CRS(proj4)
+  point = sp::SpatialPointsDataFrame(point, as.data.frame(ID))
+  sp::proj4string(point) <- sp::CRS(proj4)
   if (export) {
-    writeLinesShape(ID,file.path(runDir,paste0(ID,".shp")))
+    maptools::writeLinesShape(ID,file.path(runDir,paste0(ID,".shp")))
   }
   return(point)
 }
@@ -367,4 +371,122 @@ copyDir <- function(fromDir, toProjDir, pattern="*") {
   list<-list.files(path.expand(fromDir),pattern = pattern)
   result<-file.copy(from = paste0(fromDir,"/",list),  to = toDir, overwrite = TRUE,recursive = TRUE,copy.date =TRUE)
 }
+createTempDataTransfer <- function (){
+  tmpPath <- tempfile(pattern="007")
+  dir.create(tmpPath)
+  return(tmpPath)
+}
 
+
+vecDrawInternal <- function(tmpPath, x = NULL) {
+  deps<-digiDependencies(tmpPath) 
+  sizing = htmlwidgets::sizingPolicy(
+    browser.fill = TRUE,
+    viewer.fill = TRUE,
+    viewer.padding = 5
+  )
+  # create widget
+  htmlwidgets::createWidget(
+    name = 'vecDraw',
+    x,
+    dependencies = deps,
+    sizingPolicy = sizing,
+    package = 'uavRmp'
+  )
+}
+
+### Widget output function for use in Shiny =================================================
+#
+vecDrawOutput <- function(outputId, width = '100%', height = '800px') {
+  htmlwidgets::shinyWidgetOutput(outputId, 'vecDraw', width, height, package = 'uavRmp')
+}
+
+### Widget render function for use in Shiny =================================================
+#   
+rendervecDraw<- function(expr, env = parent.frame(), quoted = FALSE) {
+  projViewOutput<-NULL
+  if (!quoted) {
+    expr <- substitute(expr)
+  } # force quoted
+  htmlwidgets::shinyRenderWidget(expr, projViewOutput, env, quoted = TRUE)
+}
+# create dependencies
+digiDependencies <- function(tmpPath) {
+  
+  data_dir <- paste0(tmpPath,sep=.Platform$file.sep)
+  
+  
+  list(
+    htmltools::htmlDependency(name = "crs",
+                              version = "1",
+                              src = c(file = tmpPath),
+                              script = list("crs.js")),
+    
+    htmltools::htmlDependency(name = "jsondata",
+                              version = "1",
+                              src = c(file = tmpPath),
+                              script = list("jsondata")),
+    
+    htmltools::htmlDependency(
+      name = "leaflet-draw",
+      version= "0.7.3",
+      src = c(file = tmpPath),
+      script = list("leaflet.draw.js"),
+      stylesheet=list("leaflet.draw.css")
+    )
+    
+  )
+}
+
+# create dependencies
+digiDependencies <- function(tmpPath) {
+  
+  data_dir <- paste0(tmpPath,sep=.Platform$file.sep)
+  
+  
+  list(
+    htmltools::htmlDependency(name = "crs",
+                              version = "1",
+                              src = c(file = tmpPath),
+                              script = list("crs.js")),
+    
+    htmltools::htmlDependency(name = "jsondata",
+                              version = "1",
+                              src = c(file = tmpPath),
+                              script = list("jsondata")),
+    
+    htmltools::htmlDependency(
+      name = "leaflet-draw",
+      version= "0.7.3",
+      src = c(file = tmpPath),
+      script = list("leaflet.draw.js"),
+      stylesheet=list("leaflet.draw.css")
+    )
+    
+  )
+}
+
+###  creates temporary file structure for data transfer =================================================
+
+createTempDataTransfer <- function (){
+  tmpPath <- tempfile(pattern="007")
+  dir.create(tmpPath)
+  return(tmpPath)
+}
+
+vecDrawInternal <- function(tmpPath, x = NULL) {
+  deps<-digiDependencies(tmpPath) 
+  sizing = htmlwidgets::sizingPolicy(
+    browser.fill = TRUE,
+    viewer.fill = TRUE,
+    viewer.padding = 5
+  )
+  # create widget
+  htmlwidgets::createWidget(
+    name = 'vecDraw',
+    x,
+    dependencies = deps,
+    sizingPolicy = sizing,
+    package = 'uavRmp'
+  )
+}
