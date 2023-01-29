@@ -13,6 +13,7 @@ makeAP(
   followSurface = FALSE,
   followSurfaceRes = 25,
   demFn = NULL,
+  noFiles = 1,
   altFilter = 1,
   horizonFilter = 30,
   flightPlanMode = "track",
@@ -27,6 +28,8 @@ makeAP(
   cameraType = "MAPIR2",
   cmd = 16,
   uavViewDir = 0,
+  maxwaypoints = 9999,
+  above_ground = TRUE,
   djiBasic = c(0, 0, 0, -90, 0),
   dA = FALSE,
   heatMap = FALSE,
@@ -66,6 +69,8 @@ Further explanation at seealso}
 
 \item{demFn}{filename of the corresponding DEM data file.}
 
+\item{noFiles}{manual split number of files}
+
 \item{altFilter}{if \code{followingTerrain} is equal \code{TRUE} then
 \code{altFilter} is the threshold value of accepted altitude difference (m) between two way points.
 If this value is not exceeded, the way point is omitted due to the fact that only 99 way points per mission are allowed.}
@@ -103,6 +108,10 @@ Options are:
 
 \item{uavViewDir}{dview direction of uav}
 
+\item{maxwaypoints}{maximal number of waypoints for Litchi default is 90}
+
+\item{above_ground}{Litchi setting if the waypoint altitudes are interpreted as AGL default = TRUE}
+
 \item{djiBasic}{c(0,0,0,-90)
 \cr curvesize (DJI only) controls the curve angle of the uav passing way points.
 By default it is set to (\verb{= 0.0}).
@@ -135,16 +144,16 @@ The basic idea is to provide an easy to use workflow for controlling rtf-UAVs fo
 }
 \details{
 makeAP (make aerial plan) creates either intermediate flight control files for the
-DJI phantom x UAVs or ready to upload control files for the 3DR Solo/PixHawk flightcontroller. The
+DJI phantom x UAVs or ready to upload control files for the 3DR Solo/PixHawk flight controller. The
 DJI control files are designed for using with the proprietary litchi flight
-control app exchange format, while the 3DR Solo/PixHawk flightcontroller files are using the MAVLINK
+control app exchange format, while the 3DR Solo/PixHawk flight controller files are using the MAVLINK
 common message set, that is used by the PixHawk flight controller family.
-Both are implemented very rudimentarily.\cr\cr DJI:\cr The reason using DJI
+Both are implemented very rudimentary.\cr\cr DJI:\cr The reason using DJI
 is their absolute straightforward usage. Everybody can fly with a DJI but
-the price is a more or less closed system at least in the low budget segement. There are workarounds like the litchi app that provides
+the price is a more or less closed system at least in the low budget segment. There are workarounds like the litchi app that provides
 additionally to a cloud based mission planner an offline/standalone
-interface to upload a CSV formated way point file for autonomous flights to
-the Phantom.\cr\cr PixHawk flightcontroller/3DR Solo:\cr The open uav community is focused
+interface to upload a CSV formatted way point file for autonomous flights to
+the Phantom.\cr\cr PixHawk flight controller/3DR Solo:\cr The open UAV community is focused
 on the PixHawk autopilot unit and the Mission Planner software. It is well
 documented and several APIs are provided. Nevertheless a high resolution
 terrain following flight planning tool for  autonomous obstacle avoiding flight missions
@@ -229,7 +238,7 @@ fp <- makeAP(surveyArea=tutorial_flightArea,
             uavType = "dji_csv")
             
 ## call a simple shiny interface
-runApp(system.file("shiny/plan2litchi/", "app.R", package = "uavRmp"))
+shiny::runApp(system.file("shiny/plan2litchi/", "app.R", package = "uavRmp"))
         
         
 ## (6) view results

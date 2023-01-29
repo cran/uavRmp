@@ -7,16 +7,16 @@ if (!isGeneric('makeAP')) {
 #' @description The basic idea is to provide an easy to use workflow for controlling rtf-UAVs for planning autonomous surveys to retrieve aerial data sets. 
 #'   
 #' @details makeAP (make aerial plan) creates either intermediate flight control files for the
-#'   DJI phantom x UAVs or ready to upload control files for the 3DR Solo/PixHawk flightcontroller. The
+#'   DJI phantom x UAVs or ready to upload control files for the 3DR Solo/PixHawk flight controller. The
 #'   DJI control files are designed for using with the proprietary litchi flight
-#'   control app exchange format, while the 3DR Solo/PixHawk flightcontroller files are using the MAVLINK
+#'   control app exchange format, while the 3DR Solo/PixHawk flight controller files are using the MAVLINK
 #'   common message set, that is used by the PixHawk flight controller family.
-#'   Both are implemented very rudimentarily.\cr\cr DJI:\cr The reason using DJI
+#'   Both are implemented very rudimentary.\cr\cr DJI:\cr The reason using DJI
 #'   is their absolute straightforward usage. Everybody can fly with a DJI but
-#'   the price is a more or less closed system at least in the low budget segement. There are workarounds like the litchi app that provides
+#'   the price is a more or less closed system at least in the low budget segment. There are workarounds like the litchi app that provides
 #'   additionally to a cloud based mission planner an offline/standalone
-#'   interface to upload a CSV formated way point file for autonomous flights to
-#'   the Phantom.\cr\cr PixHawk flightcontroller/3DR Solo:\cr The open uav community is focused
+#'   interface to upload a CSV formatted way point file for autonomous flights to
+#'   the Phantom.\cr\cr PixHawk flight controller/3DR Solo:\cr The open UAV community is focused
 #'   on the PixHawk autopilot unit and the Mission Planner software. It is well
 #'   documented and several APIs are provided. Nevertheless a high resolution 
 #'   terrain following flight planning tool for  autonomous obstacle avoiding flight missions
@@ -73,6 +73,8 @@ if (!isGeneric('makeAP')) {
 #'   assumed that the UAV is started at the highest point of the surveyArea
 #'   otherwise you have to defined the position of launching.
 #' @param overlap overlapping of the pictures in percent (1.0 = 100)
+#' @param maxwaypoints maximal number of waypoints for Litchi default is 90
+#' @param above_ground Litchi setting if the waypoint altitudes are interpreted as AGL default = TRUE 
 #' @param djiBasic c(0,0,0,-90)
 #' \cr curvesize (DJI only) controls the curve angle of the uav passing way points.
 #' By default it is set to (`= 0.0`).
@@ -93,6 +95,7 @@ if (!isGeneric('makeAP')) {
 #' @param windCondition 1= calm 2= light air 1-5km/h, 3= light breeze 6-11km/h, 4=gentle breeze 12-19km/h 5= moderate breeze 20-28km/h
 #' @param copy copy switch
 #' @param cmd mavlink command
+#' @param noFiles manual split number of files
 #' @param uavViewDir dview direction of uav
 #' @param maxFlightTime user defined estimation of the lipo lifetime (20 min default)
 #' @param rcRange range of estimated range of remote control
@@ -178,7 +181,7 @@ if (!isGeneric('makeAP')) {
 #'             uavType = "dji_csv")
 #'             
 #' ## call a simple shiny interface
-#' runApp(system.file("shiny/plan2litchi/", "app.R", package = "uavRmp"))
+#' shiny::runApp(system.file("shiny/plan2litchi/", "app.R", package = "uavRmp"))
 #'         
 #'         
 #' ## (6) view results
@@ -215,6 +218,7 @@ makeAP <- function(projectDir = tempdir(),
                    followSurface = FALSE,
                    followSurfaceRes = 25,
                    demFn = NULL,
+                   noFiles = 1,
                    altFilter = 1.0,
                    horizonFilter = 30,
                    flightPlanMode = "track",
@@ -229,6 +233,8 @@ makeAP <- function(projectDir = tempdir(),
                    cameraType = "MAPIR2",
                    cmd=16,
                    uavViewDir = 0,
+                   maxwaypoints = 9999,
+                   above_ground = TRUE,
                    djiBasic = c(0, 0, 0,-90, 0),
                    dA = FALSE,
                    heatMap = FALSE,
@@ -240,6 +246,7 @@ makeAP <- function(projectDir = tempdir(),
 {
   ###  setup environ and params
   cat("setup environ and params...\n")
+  nofiles=1
   # assign flight mission name
   #locationName <- file.path(locationName,"missions")
   if (substr(projectDir,nchar(projectDir),nchar(projectDir)) == "/")  projectDir <- substr(projectDir,1,nchar(projectDir)-1)
@@ -265,6 +272,7 @@ makeAP <- function(projectDir = tempdir(),
   
   ## need picfootprint for calculating the heatmap
   if (heatMap) { picFootprint = TRUE }
+  
   
   ## uav platform depending parameter setting
   if (uavType == "dji_csv") {
@@ -319,7 +327,7 @@ makeAP <- function(projectDir = tempdir(),
   #-----------------------------------------------------------------------------------------------
   # if a missionplanner surveypalanning is used 
   if (useMP) {
-    
+    #browser()
     t<-jsonlite::fromJSON(surveyArea)
     listPos<-grep("command", t$mission$items$TransectStyleComplexItem$Items)
     tmp<- t$mission$items$TransectStyleComplexItem$Items[listPos][[1]]
@@ -411,14 +419,15 @@ makeAP <- function(projectDir = tempdir(),
     heading <- updir
     # define output line var
     lns <- list()
-    lns <- launch2flightalt(p, lns, uavViewDir, launch2startHeading, uavType)
+    lns <- launch2flightalt(p, lns, uavViewDir, launch2startHeading, uavType,above_ground=above_ground)
     # assign starting point
     pos <- c(df_coordinates[1,][2],df_coordinates[1,][1])
     
     footprint <- calcCamFoot(pos[1], pos[2], uavViewDir, trackDistance, flightAltitude, 0, 0,factor)
-    footprint<-  sp::spTransform(footprint,sp::CRS("+proj=utm +zone=32 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"))
-    landscape<-abs(abs(footprint@bbox[1]-footprint@bbox[3])*overlap-abs(footprint@bbox[1]-footprint@bbox[3]))
-    portrait<- abs(abs(footprint@bbox[2]-footprint@bbox[4])*overlap-abs(footprint@bbox[2]-footprint@bbox[4]))
+   footprint =            sf::st_transform(sf::st_as_sf(footprint),crs = 25832)  
+    #footprint<-  sp::spTransform(footprint,sp::CRS("+init=epsg:25832"))
+    landscape<-abs(abs(sf::st_bbox(footprint)[1]-sf::st_bbox(footprint)[3])*overlap-abs(sf::st_bbox(footprint)[1]-sf::st_bbox(footprint)[3]))
+    portrait<- abs(abs(sf::st_bbox(footprint)[2]-sf::st_bbox(footprint)[4])*overlap-abs(sf::st_bbox(footprint)[2]-sf::st_bbox(footprint)[4]))
     
     
     # calculates the footprint of the first position and returns a SpatialPolygonsDataFrame
@@ -427,7 +436,7 @@ makeAP <- function(projectDir = tempdir(),
     
     # ## creates the export control parameter set of the first position
     # if (uavType == "dji_csv") {
-    #  lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p)
+    #  lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p,ag=above_ground)
     # }
     #
     if (uavType == "pixhawk") {
@@ -439,7 +448,7 @@ makeAP <- function(projectDir = tempdir(),
 # set counter and params for mode = "track" mode
     if (mode == "track") {
       if (uavType == "dji_csv") {
-        lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p)
+        lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p,ag=above_ground)
       }
       if (uavType == "pixhawk") {
         lns[length(lns) + 1] <- makeUavPointMAV(lat = pos[2],lon = pos[1],head = uavViewDir,group = 99)
@@ -451,7 +460,7 @@ makeAP <- function(projectDir = tempdir(),
     ## set counter and params for mode = "waypoints"
     else if (mode == "waypoints") {
       if (uavType == "dji_csv") {
-        lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p)
+        lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p,ag=above_ground)
       }
       if (uavType == "pixhawk") {
         lns[length(lns) + 1] <- makeUavPointMAV(lat = pos[2],lon = pos[1],head = uavViewDir,group = 99)
@@ -462,7 +471,7 @@ makeAP <- function(projectDir = tempdir(),
     else if (mode == "terrainTrack")
       group = 99 }
     group = 99
-    df_coord<-as.data.frame(df_coordinates)
+    df_coord<-data.frame(df_coordinates)
     names(df_coord)<-c("lat","lon")
     for (j in 2:(nrow(df_coord)-1)) {
       df_coord$heading[j] <- geosphere::bearing(c(df_coord$lon[j],df_coord$lat[j] ), c(df_coord$lon[j + 1],df_coord$lat[j + 1]),a = 6378137,f = 1 / 298.257223563)
@@ -475,8 +484,8 @@ makeAP <- function(projectDir = tempdir(),
     # then do for the rest  forward and backward
     for (j in 2:(nrow(df_coord)-1)) {
       pOld<- c(df_coord$lon[j],df_coord$lat[j])
-     # for (i in seq(1:df_coord$multiply[j])) {
-        if (mode == "waypoints" || mode == "terrainTrack" || mode == "track") {
+     # for (i in seq(1:df_coord$multiply[j])) {  mode == "terrainTrack"
+        if (mode == "waypoints"  || mode == "track") {
           group <- 1
           if (df_coord$multiply[j] < 1 || is.na(df_coord$multiply[j])) {group <- 99}}
         #  else      {group <- 1}}
@@ -493,7 +502,7 @@ makeAP <- function(projectDir = tempdir(),
           group <- 99
         }
         if (uavType == "dji_csv") {
-          lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p)
+          lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p,ag=above_ground)
         }
         if (uavType == "pixhawk") {
         lns[length(lns) + 1] <- makeUavPointMAV(lat = pos[2], lon = pos[1], head = uavViewDir, group = group)
@@ -507,7 +516,7 @@ makeAP <- function(projectDir = tempdir(),
       #   pOld <- pos
       #   flightLength <- flightLength + crossDistance
       #   if (uavType == "dji_csv") {
-      #     lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p)
+      #     lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p,ag=above_ground)
       #   }
       #   if (uavType == "pixhawk") {
       #     lns[length(lns) + 1] <-
@@ -529,7 +538,7 @@ makeAP <- function(projectDir = tempdir(),
       #   flightLength <- flightLength + crossDistance
       #   
       #   if (uavType == "dji_csv") {
-      #     lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p)
+      #     lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p,ag=above_ground)
       #     heading <- updir
       #   }
       #   if (uavType == "pixhawk") {
@@ -569,15 +578,17 @@ makeAP <- function(projectDir = tempdir(),
   # pictures are assumed as squares
   crossDistance <- trackDistance
   
-
+  #browser()
   ## calculate survey area
   # create an sp polygon object of the mission area
   taskArea <- taskarea(p, csvFn)
   mapview::mapview( taskArea)
   # reproject it to UTM
-  taskAreaUTM <- sp::spTransform(taskArea, sp::CRS(paste("+proj=utm +zone=",long2UTMzone(p$lon1)," ellps=WGS84",sep = '')))
+  ta=sf::st_as_sf(taskArea)
+  ta=sf::st_transform(ta,crs = paste("+proj=utm +zone=",long2UTMzone(p$lon1)," ellps=WGS84",sep = ''))
+  # taskAreaUTM <- as(ta, "Spatial") # rgeos
   # calculate area
-  surveyAreaUTM <- rgeos::gArea(taskAreaUTM)
+  surveyAreaUTM <- sf::st_area(ta) # rgeos
   
   
   ## now do old planning stuff
@@ -641,16 +652,18 @@ makeAP <- function(projectDir = tempdir(),
   # define output line var
   lns <- list()
   
-  lns <- launch2flightalt(p, lns, uavViewDir, launch2startHeading, uavType)
+  lns <- launch2flightalt(p, lns, uavViewDir, launch2startHeading, uavType,above_ground=above_ground)
   
   
   # assign starting point
   pos <- c(p$lon1, p$lat1)
   
   footprint <- calcCamFoot(pos[1], pos[2], uavViewDir, trackDistance, flightAltitude, 0, 0,factor)
-  footprint<-  sp::spTransform(footprint,sp::CRS("+proj=utm +zone=32 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"))
-  landscape<-abs(abs(footprint@bbox[1]-footprint@bbox[3])*overlap-abs(footprint@bbox[1]-footprint@bbox[3]))
-  portrait<- abs(abs(footprint@bbox[2]-footprint@bbox[4])*overlap-abs(footprint@bbox[2]-footprint@bbox[4]))
+  footprint =            sf::st_transform(sf::st_as_sf(footprint),crs = 25832)  
+  #footprint<-  sp::spTransform(footprint,sp::CRS("+proj=utm +zone=32 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"))
+  landscape<-abs(abs(sf::st_bbox(footprint)[1]-sf::st_bbox(footprint)[3])*overlap-abs(sf::st_bbox(footprint)[1]-sf::st_bbox(footprint)[3]))
+  portrait<- abs(abs(sf::st_bbox(footprint)[2]-sf::st_bbox(footprint)[4])*overlap-abs(sf::st_bbox(footprint)[2]-sf::st_bbox(footprint)[4]))
+  
   
   
   # calculates the footprint of the first position and returns a SpatialPolygonsDataFrame
@@ -660,7 +673,7 @@ makeAP <- function(projectDir = tempdir(),
   ## creates the export control parameter set of the first position
   ##
   if (uavType == "dji_csv") {
-    lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p)
+    lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p,ag=above_ground)
   }
   if (uavType == "pixhawk") {
     lns[length(lns) + 1] <-  makeUavPointMAV(lat = pos[2],lon = pos[1], head = uavViewDir, group = 99 )
@@ -671,7 +684,7 @@ makeAP <- function(projectDir = tempdir(),
   ## set counter and params for mode = "track" mode
   if (mode == "track") {
     if (uavType == "dji_csv") {
-      lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p)
+      lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p,ag=above_ground)
     }
     if (uavType == "pixhawk") {
       lns[length(lns) + 1] <- makeUavPointMAV(lat = pos[2],lon = pos[1],head = uavViewDir,group = 99)
@@ -683,7 +696,7 @@ makeAP <- function(projectDir = tempdir(),
   ## set counter and params for mode = "waypoints"
   else if (mode == "waypoints") {
     if (uavType == "dji_csv") {
-      lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p)
+      lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p,ag=above_ground)
     }
     if (uavType == "pixhawk") {
       lns[length(lns) + 1] <- makeUavPointMAV(lat = pos[2],lon = pos[1],head = uavViewDir,group = 99)
@@ -717,14 +730,14 @@ makeAP <- function(projectDir = tempdir(),
       
       # calc next coordinate
       pos <- calcNextPos(pOld[1], pOld[2], heading, trackDistance)
-      if (picFootprint) camera <- maptools::spRbind(camera, calcCamFoot( pos[1], pos[2], uavViewDir, trackDistance, flightAltitude,i,j,factor))
+      if (picFootprint) camera <- sf::st_polygon(camera, calcCamFoot( pos[1], pos[2], uavViewDir, trackDistance, flightAltitude,i,j,factor)) #maptools::spRbind(camera, calcCamFoot( pos[1], pos[2], uavViewDir, trackDistance, flightAltitude,i,j,factor))
       pOld <- pos
       flightLength <- flightLength + trackDistance
       if (mode == "track") {
         group <- 99
       }
       if (uavType == "dji_csv") {
-        lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = group, p)
+        lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = group, p,ag=above_ground)
       }
       if (uavType == "pixhawk") {
         lns[length(lns) + 1] <- makeUavPointMAV(lat = pos[2], lon = pos[1], head = uavViewDir, group = group)
@@ -733,11 +746,11 @@ makeAP <- function(projectDir = tempdir(),
     
     if ((j %% 2 != 0)) {
       pos <- calcNextPos(pOld[1], pOld[2], crossdir, crossDistance)
-      if (picFootprint) camera <-  maptools::spRbind(camera, calcCamFoot( pos[1], pos[2], uavViewDir, trackDistance,flightAltitude,i,j,factor))
+      if (picFootprint) camera <- sf::st_polygon(camera, calcCamFoot( pos[1], pos[2], uavViewDir, trackDistance,flightAltitude,i,j,factor)) #maptools::spRbind(camera, calcCamFoot( pos[1], pos[2], uavViewDir, trackDistance,flightAltitude,i,j,factor))
       pOld <- pos
       flightLength <- flightLength + crossDistance
       if (uavType == "dji_csv") {
-        lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p)
+        lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p,ag=above_ground)
       }
       if (uavType == "pixhawk") {
         lns[length(lns) + 1] <-
@@ -753,12 +766,12 @@ makeAP <- function(projectDir = tempdir(),
     
     else if ((j %% 2 == 0)) {
       pos <- calcNextPos(pOld[1], pOld[2], crossdir, crossDistance)
-      if (picFootprint) camera <- maptools::spRbind(camera, calcCamFoot( pos[1], pos[2], uavViewDir,trackDistance,flightAltitude,i,j,factor))
+      if (picFootprint) camera <- sf::st_polygon(camera, calcCamFoot( pos[1], pos[2], uavViewDir, trackDistance,flightAltitude,i,j,factor)) #maptools::spRbind(camera, calcCamFoot( pos[1], pos[2], uavViewDir,trackDistance,flightAltitude,i,j,factor))
       pOld <- pos
       flightLength <- flightLength + crossDistance
       
       if (uavType == "dji_csv") {
-        lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p)
+        lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p,ag=above_ground)
         heading <- updir
       }
       if (uavType == "pixhawk") {
@@ -775,7 +788,7 @@ makeAP <- function(projectDir = tempdir(),
   
   ##########################
   ##########################################
-  
+  #browser()
   #estimate time regarding parameter
   ft <- calculateFlightTime( maxFlightTime,
                              windCondition,
@@ -785,7 +798,7 @@ makeAP <- function(projectDir = tempdir(),
                              totalTrackdistance,
                              picRate,
                              logger)
-  
+  #browser()
   rawTime <- ft[1]
   maxFlightTime <- ft[2]
   maxSpeed <- ft[3]
@@ -809,19 +822,19 @@ makeAP <- function(projectDir = tempdir(),
     sp::proj4string(djiDF) <- sp::CRS("+proj=longlat +datum=WGS84 +no_defs")
     # now DEM stuff
 
-    result <- analyzeDSM(demFn,djiDF,p,altFilter,horizonFilter,followSurface,followSurfaceRes,logger,projectDir,dA,dateString,locationName,runDir,taskarea=taskArea,gdalLink)
+   result <- analyzeDSM(demFn,djiDF,p,altFilter,horizonFilter,followSurface,followSurfaceRes,logger,projectDir,dA,dateString,locationName,runDir,taskarea=taskArea,gdalLink)
     # assign adapted dem to demFn
-    demFn <- result[[3]]
-    dfcor <- result[[2]]
+   demFn <- result[[3]]
+   dfcor <- result[[2]]
     
     # max numbers of dji waypoints is due to factory limits 98
     # according to start and rth safety we need 6 points for organizig the splitted task
-    nofiles <- ceiling(nrow(dfcor@data) / 90)
-    maxPoints <- 90
+    nofiles <- ceiling(nrow(dfcor@data) / maxwaypoints)
+    maxPoints <- maxwaypoints
     minPoints <- 1
     # check if the flighttime is forcing more files
-    if (nofiles < ceiling(rawTime / maxFlightTime)) {
-      nofiles <- ceiling(rawTime / maxFlightTime)
+    if (nofiles < noFiles) {
+      nofiles <- noFiles
       maxPoints <- ceiling(nrow(dfcor@data) / nofiles) + 1
       mp <- maxPoints
       minPoints <- 1
@@ -829,9 +842,11 @@ makeAP <- function(projectDir = tempdir(),
     # start the creation of the control file(s)
     cat('generate control files...\n')
 
+    
     # generate single tasks waypoint file for DJI Litchi import format
-    calcDjiTask( result[[2]],taskName,nofiles,maxPoints,p,logger, round(result[[6]], digits = 0), trackSwitch=FALSE,file.path(runDir,"tmpdem.tif"),result[[8]], projectDir,dateString,locationName,runDir)
+    calcDjiTask( result[[2]],taskName,nofiles,maxPoints,p,logger, round(result[[6]], digits = 0), trackSwitch=FALSE,file.path(runDir,"demll.tif"),result[[8]], projectDir,dateString,locationName,runDir)
   }
+  
   else if (uavType == "pixhawk") {
     writeLines(unlist(lns), fileConn)
     mavDF <- utils::read.csv(file.path(runDir,"tmp.csv"), colClasses=c("V4"="character",
@@ -845,14 +860,13 @@ makeAP <- function(projectDir = tempdir(),
     
     if (is.null(launchAltitude)) {
       # analyze DEM related stuff
-
       result <- analyzeDSM(demFn,mavDF,p,altFilter,horizonFilter ,followSurface,followSurfaceRes,logger,projectDir,dA,dateString,locationName,runDir,taskArea,gdalLink)
       # assign adapted dem to demFn
       lauchPos <- result[[1]]
       dfcor <- result[[2]]
       demFn <- result[[3]]
-      
-      nofiles <- ceiling(rawTime / maxFlightTime)
+      if (noFiles > nofiles)
+      {nofiles <- ceiling(rawTime / maxFlightTime)} else {nofiles = noFiles}
       maxPoints <- ceiling(nrow(dfcor@data) / nofiles) + 1
       
     }

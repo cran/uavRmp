@@ -20,7 +20,7 @@ analyzeDSM <- function(demFn ,df,p,altFilter,horizonFilter,followSurface,followS
     g<- link2GI::linkGDAL()
   else
     g<-gdalLink
-  
+  #browser() 
   cat("load DEM/DSM data...\n")
   ## load DEM data either from a local GDAL File or from a raster object or if nothing is provided tray to download SRTM dataa
   #if no DEM is provided try to get SRTM data
@@ -61,15 +61,17 @@ analyzeDSM <- function(demFn ,df,p,altFilter,horizonFilter,followSurface,followS
       proj <- substring(tmpproj,2,nchar(tmpproj) - 2)
       if (class(taskarea)[1] == 'SpatialPolygonsDataFrame' | class(taskarea)[1] == 'SpatialPolygons') taskarea <- sf::st_as_sf(taskarea)
       ta <- sf::st_transform(taskarea, sp::CRS("+proj=utm +zone=32 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"))
-      taskAreaBuffer <- sf::st_buffer(ta,50) 
+      taskAreaBuffer <- sf::st_buffer(ta,150) 
       cut<- sf::st_bbox(taskAreaBuffer)
       cut<-sf::st_as_sfc(sf::st_bbox(cut))
       cut <- sf::st_transform(cut, sp::CRS(proj))
       rundem<- raster::crop(raster::raster(path.expand(demFn),band = 1), methods::as(cut,"Spatial"))
       raster::writeRaster(rundem,file.path(runDir,"tmpdem.tif"),overwrite = TRUE)
-      system(paste0(g$path,'gdalwarp -overwrite -q ', file.path(runDir,"tmpdem.tif"),' ',
-                    file.path(runDir,"demll.tif"), ' ',
-                    '-t_srs "+proj=longlat +datum=WGS84 +no_defs"'))
+      demll=raster::projectRaster(from = rundem,crs ="+proj=longlat +datum=WGS84 +no_defs" )
+      raster::writeRaster(demll,file.path(runDir,"demll.tif"),overwrite = TRUE)
+      # system(paste0(g$path,'gdalwarp -overwrite -q ', file.path(runDir,"tmpdem.tif"),' ',
+      #               file.path(runDir,"demll.tif"), ' ',
+      #               '-t_srs "+proj=longlat +datum=WGS84 +no_defs"'))
       dem<-raster::raster(file.path(runDir,"tmpdem.tif"))
       demll<-raster::raster(file.path(runDir,"demll.tif"))
       dem <- raster::setMinMax(dem)
@@ -221,7 +223,7 @@ analyzeDSM <- function(demFn ,df,p,altFilter,horizonFilter,followSurface,followS
     cat("start demArea analysis - will take a while...\n")
     c        <- raster::clump(tmpdemll > 0)
     demArea  <- raster::rasterToPolygons(c)
-    demArea  <- rgeos::gUnaryUnion(demArea)
+    demArea  <- sf::st_combine(demArea) #rgeos::gUnaryUnion(demArea)
   } else {
     demArea  <- "NULL"
   }
@@ -236,6 +238,11 @@ analyzeDSM <- function(demFn ,df,p,altFilter,horizonFilter,followSurface,followS
 
 
 calcMAVTask <- function(df,mission,nofiles,rawTime,flightPlanMode,trackDistance,batteryTime,logger,p,len,multiply,tracks,param,speed,uavType,dem,maxAlt,projectDir, workingDir,locationName,uavViewDir,cmd,runDir){
+  # read dem
+  #dem <- raster::raster(dem)
+  #raster::writeRaster(demll,file.path(runDir,"demll.tif"),overwrite = TRUE)
+  dem<-raster::raster(file.path(runDir,"demll.tif"))
+  
   fin <- FALSE
   minPoints <- 1
   # set number of waypoints per file
@@ -252,8 +259,7 @@ calcMAVTask <- function(df,mission,nofiles,rawTime,flightPlanMode,trackDistance,
   launchLat <- df@data[1,8]
   launchLon <- df@data[1,9]
   
-  # read dem
-  dem <- raster::raster(dem)
+  
   # re-read launch altitude
   launch_pos <- as.data.frame(cbind(launchLat,launchLon))
   sp::coordinates(launch_pos) <- ~launchLon+launchLat
@@ -443,17 +449,17 @@ calcSurveyArea <- function(surveyArea,projectDir,logger,useMP) {
   else {
     # import flight area if provided by an external vector file
     
-    if (methods::is(surveyArea, "numeric") & length(surveyArea) >= 8) {
+    if (!methods::is(surveyArea, "numeric") & length(surveyArea) >= 8) {
       surveyArea <- surveyArea
     }
-    else if (methods::is(surveyArea, "numeric") & length(surveyArea) < 8) {
-      log4r::levellog(logger, 'FATAL', "### you did not provide a launching coordinate")
-      stop("### you did not provide a launching coordinate")
-    }
+    # else if (!methods::is(surveyArea, "numeric") & length(surveyArea) < 8) {
+    #   log4r::levellog(logger, 'FATAL', "### you did not provide a launching coordinate")
+    #   stop("### you did not provide a launching coordinate")
+    # }
     else {
       #file.copy( from = surveyArea, to = file.path(projectDir,"data"))
       test <- try(flightBound <- readExternalFlightBoundary(surveyArea))
-      if (methods::is(test, "try-error")) {
+      if (!methods::is(test, "try-error")) {
         surveyArea <- flightBound 
       } else {
         log4r::levellog(logger, 'FATAL', "### can not find/read input file")        
@@ -467,16 +473,8 @@ calcSurveyArea <- function(surveyArea,projectDir,logger,useMP) {
 
 # imports the survey area from a json or kml file
 importSurveyArea <- function(fN) {
-  # read shapefile
-  #if (path.expand(extension(fN)) == ".json") 
-  #  flightBound <- rgdal::readOGR(dsn = path.expand(fN), layer = "OGRGeoJSON",verbose = FALSE)
-  # else if (path.expand(extension(fN)) != ".kml" ) 
-  #    flightBound <- rgdal::readOGR(dsn = path.expand(dirname(fN)), layer = tools::file_path_sans_ext(basename(fN)), pointDropZ = TRUE, verbose = FALSE)
-  #else if (path.expand(extension(fN)) == ".kml" ) {
   tmp <- sf::st_read(path.expand(fN))
   flightBound = methods::as(tmp, "Spatial")
-  #flightBound <- rgdal::readOGR(dsn = path.expand(fN), layer = tools::file_path_sans_ext(basename(fN)), pointDropZ = TRUE, verbose = FALSE)    
-  #  }
   flightBound@data <- as.data.frame(cbind(1,1,1,1,1,-1,0,-1,1,1,1))
   names(flightBound@data) <- c("Name", "description", "timestamp", "begin", "end", "altitudeMode", "tessellate", "extrude", "visibility", "drawOrder", "icon")
   return(flightBound)
@@ -487,7 +485,7 @@ readExternalFlightBoundary <- function(fN, extend = FALSE) {
   flightBound <- importSurveyArea(fN)
   sp::spTransform(flightBound, sp::CRS("+proj=longlat +datum=WGS84 +no_defs"))
   if (extend) {
-    x <- raster::extent(flightBound)
+    x <- sf::st_bbox(flightBound)
     
     # first flightline used for length and angle of the parallels
     lon1 <- x@xmin # startpoint
@@ -496,10 +494,10 @@ readExternalFlightBoundary <- function(fN, extend = FALSE) {
     lat2 <- x@ymax # endpoint
     lon3 <- x@xmax # crosswaypoint
     lat3 <- x@ymax # crosswaypoint
-    if (methods::is(flightBound, "SpatialPolygonesDataFrame")) {
+    if (!methods::is(flightBound, "SpatialPolygonesDataFrame")) {
       launchLon  <- flightBound@polygons[[1]]@Polygons[[1]]@coords[4,1] 
       launchLat <- flightBound@polygons[[1]]@Polygons[[1]]@coords[4,2]  
-    } else if (methods::is(flightBound, "SpatialLinesDataFrame")) {
+    } else if (!methods::is(flightBound, "SpatialLinesDataFrame")) {
       launchLon <- flightBound@lines[[1]]@Lines[[1]]@coords[7,1] 
       launchLat <- flightBound@lines[[1]]@Lines[[1]]@coords[7,2]
     }
@@ -518,20 +516,21 @@ readExternalFlightBoundary <- function(fN, extend = FALSE) {
       launchLat <- flightBound@polygons[[1]]@Polygons[[1]]@coords[4,2]       
     }
     if (methods::is(flightBound, "SpatialLinesDataFrame")) {
-      
-      tr<-try(lon3 <- flightBound@lines[[1]]@Lines[[1]]@coords[5,1],silent = TRUE)
-      if (methods::is(tr, "try-error")) {
-        lon1 <- flightBound@lines[[1]]@Lines[[1]]@coords[1,1] 
-        lat1 <- flightBound@lines[[1]]@Lines[[1]]@coords[1,2] 
+      fb = as(flightBound, "SpatialPointsDataFrame")
+      fb = sp::remove.duplicates(fb)
+      tr<-try(lon3 <- fb@coords[4,1],silent = TRUE)
+      if (!methods::is(tr, "try-error")) {
+        lon1 <- fb@coords[1,1] 
+        lat1 <- fb@coords[1,2] 
         
-        lon2 <- flightBound@lines[[1]]@Lines[[1]]@coords[2,1] 
-        lat2 <- flightBound@lines[[1]]@Lines[[1]]@coords[2,2] 
+        lon2 <- fb@coords[2,1] 
+        lat2 <- fb@coords[2,2] 
         
-        lon3 <- flightBound@lines[[1]]@Lines[[1]]@coords[3,1] 
-        lat3 <- flightBound@lines[[1]]@Lines[[1]]@coords[3,2]
+        lon3 <- fb@coords[3,1] 
+        lat3 <- fb@coords[3,2]
         
-        launchLon <- flightBound@lines[[1]]@Lines[[1]]@coords[4,1] 
-        launchLat <- flightBound@lines[[1]]@Lines[[1]]@coords[4,2]  
+        launchLon <- fb@coords[4,1] 
+        launchLat <- fb@coords[4,2]  
       } else {
       lon1 <- flightBound@lines[[1]]@Lines[[1]]@coords[1,1] 
       lat1 <- flightBound@lines[[1]]@Lines[[1]]@coords[1,2] 
@@ -600,18 +599,22 @@ calcDjiTask <- function(df, mission, nofiles, maxPoints, p, logger, rth, trackSw
   launchLat <- p$launchLat # df@data[1,1]
   launchLon <- p$launchLon #df@data[1,2]
 
-  g<- link2GI::linkGDAL()
-  system(paste0(g$path,'gdalwarp -overwrite -q ',
-                '-t_srs "+proj=longlat +datum=WGS84 +no_defs" ',
-                file.path(runDir,"tmpdem.tif"),' ',
-                file.path(runDir,"demdll.tif")
-  ))
-  dem<-raster::raster(file.path(runDir,"demdll.tif"))
+  # g<- link2GI::linkGDAL()
+  # system(paste0(g$path,'gdalwarp -overwrite -q ',
+  #               '-t_srs "+proj=longlat +datum=WGS84 +no_defs" ',
+  #               file.path(runDir,"tmpdem.tif"),' ',
+  #               file.path(runDir,"demdll.tif")
+  # ))
+
+  #demll=raster::projectRaster(from = dem,crs ="+proj=longlat +datum=WGS84 +no_defs" )
+  #raster::writeRaster(demll,file.path(runDir,"demll.tif"),overwrite = TRUE)
+  dem<-raster::raster(file.path(runDir,"demll.tif"))
   # due to reprojection recalculate teh launch position and altitude
   launch_pos <- as.data.frame(cbind(launchLat,launchLon))
   sp::coordinates(launch_pos) <- ~launchLon+launchLat
   sp::proj4string(launch_pos) <- sp::CRS("+proj=longlat +datum=WGS84 +no_defs")
-  launchAlt <- raster::extract(dem,launch_pos,layer = 1, nl = 1)  
+  launchAlt <- raster::extract(dem,launch_pos) #exactextractr::exact_extract(terra::rast(dem),sf::st_as_sf(launch_pos)  )
+  
  # browser()
   # for each of the splitted task files
   for (i in 1:nofiles) {
@@ -734,7 +737,7 @@ calcDjiTask <- function(df, mission, nofiles, maxPoints, p, logger, rth, trackSw
 
 
 # (DJI only) create the full argument list for one waypoint
-makeUavPoint <- function(pos, uavViewDir, group, p, header = FALSE, sep = ",") {
+makeUavPoint <- function(pos, uavViewDir, group, p, header = FALSE, sep = "," , ag = TRUE) {
   # create the value lines
   #browser()
   if (!header) {
@@ -743,6 +746,8 @@ makeUavPoint <- function(pos, uavViewDir, group, p, header = FALSE, sep = ",") {
     for (i in seq(1:length(p$task[,1]))) { 
       action <- paste0(action,p$task[i,]$x[1],sep)
     }
+    if (ag) dji_actions = "-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,1,0,0,0,0,0,0,0,"
+    else dji_actions = "-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,0,0,0,0,0,0,0,0,"
     # create waypoint plus camera options
     tmp <-    paste0(pos[1],sep,pos[2],sep,pos[2],sep,pos[1],
                      sep,as.character(p$flightAltitude),
@@ -751,7 +756,7 @@ makeUavPoint <- function(pos, uavViewDir, group, p, header = FALSE, sep = ",") {
                      sep,as.character(p$rotationdir),
                      sep,as.character(p$gimbalmode),
                      sep,as.character(p$gimbalpitchangle),
-                     sep,"-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,-1,0,1,0,0,0,0,0,0,0,",
+                     sep,dji_actions,
                      group)
   }
   # create the header
@@ -987,13 +992,13 @@ calculateFlightTime <- function(maxFlightTime, windCondition, maxSpeed, uavOptim
 
 
 # assign launching point 
-launch2flightalt <- function(p, lns, uavViewDir, launch2startHeading, uavType) {
+launch2flightalt <- function(p, lns, uavViewDir, launch2startHeading, uavType, above_ground = TRUE) {
   launchPos <- c(p$launchLon,p$launchLat)
-  if (uavType == "dji_csv") {lns[length(lns) + 1] <- makeUavPoint(launchPos, uavViewDir, group = 99, p)}
+  if (uavType == "dji_csv") {lns[length(lns) + 1] <- makeUavPoint(launchPos, uavViewDir, group = 99, p,ag = above_ground)}
   if (uavType == "pixhawk")  {lns[length(lns) + 1] <- makeUavPointMAV(lat = launchPos[2], lon = launchPos[1], head = uavViewDir, group = 99)}
   pOld <- launchPos
   pos <- calcNextPos(pOld[1],pOld[2],launch2startHeading,10)
-  if (uavType == "dji_csv") {lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p)}
+  if (uavType == "dji_csv") {lns[length(lns) + 1] <- makeUavPoint(pos, uavViewDir, group = 99, p,ag=above_ground)}
   if (uavType == "pixhawk")  {lns[length(lns) + 1] <- makeUavPointMAV(lat = pos[2], lon = pos[1], head = uavViewDir, group = 99)}
   return(lns)
 }
@@ -1197,7 +1202,9 @@ makeFlightPathT3 <- function(treeList,
                              circleRadius,
                              flightArea,
                              takeOffAlt,
-                             runDir, gdalLink =NULL){
+                             runDir, 
+                             gdalLink = NULL,
+                             above_ground){
   if (is.null(gdalLink)) 
     g<- link2GI::linkGDAL()
   else 
@@ -1249,12 +1256,12 @@ makeFlightPathT3 <- function(treeList,
       forward <- geosphere::bearing(treeList@coords[i,], treeList@coords[i + 1,], a = 6378137, f = 1/298.257223563)
       backward <- geosphere::bearing(treeList@coords[i + 1,], treeList@coords[i,], a = 6378137, f = 1/298.257223563)
       p$task <- fp_getPresetTask("treetop")
-      lns[length(lns) + 1] <- makeUavPoint(treeList@coords[i,], forward, p, group = 99)
+      lns[length(lns) + 1] <- makeUavPoint(treeList@coords[i,], forward, p, group = 99,ag=above_ground)
       p$task <- fp_getPresetTask("nothing")
       posUp  <- calcNextPos(treeList@coords[i,][1], treeList@coords[i,][2], heading = forward, distance = p$climbDist)
-      lns[length(lns) + 1] <- makeUavPoint(posUp, forward, p, group = 1)
+      lns[length(lns) + 1] <- makeUavPoint(posUp, forward, p, group = 1,ag=above_ground)
       posDown <- calcNextPos(treeList@coords[i + 1,][1], treeList@coords[i + 1,][2], backward, distance = p$climbDist)
-      lns[length(lns) + 1] <- makeUavPoint(posDown, forward, p, group = 1)
+      lns[length(lns) + 1] <- makeUavPoint(posDown, forward, p, group = 1,ag=above_ground)
       writeLines(unlist(lns), fileConn)
     }
     else if (uavType == "pixhawk") {
@@ -1360,7 +1367,7 @@ makeFlightPathT3 <- function(treeList,
   if (uavType == "dji_csv") {
     cat("calculating DEM related stuff\n")
     djiDF <- utils::read.csv(file.path(runDir,"treepoints.csv"),sep = ",",header = FALSE)
-    names(djiDF) <- unlist(strsplit( makeUavPoint(pos,uavViewDir,group = 99,p,header = TRUE,sep = ' '),split = " "))
+    names(djiDF) <- unlist(strsplit( makeUavPoint(pos,uavViewDir,group = 99,p,ag=above_ground,header = TRUE,sep = ' '),split = " "))
     sp::coordinates(djiDF) <- ~lon+lat
     sp::proj4string(djiDF) <- sp::CRS("+proj=longlat +datum=WGS84 +no_defs")
     result <- getAltitudes(demll ,djiDF,p,followSurfaceRes = 5,logger,projectDir,locationName,flightArea)
@@ -1399,7 +1406,7 @@ makeFlightPathT3 <- function(treeList,
 
 # get launch position coordinates
 readLaunchPos <- function(fN,extend=FALSE){
-  if (methods::is(fN, "numeric")) {
+  if (!methods::is(fN, "numeric")) {
     flightBound <- importSurveyArea(fN)
     launchLon <- flightBound@polygons[[1]]@Polygons[[1]]@coords[1,1] 
     launchLat <- flightBound@polygons[[1]]@Polygons[[1]]@coords[1,2] 
@@ -1498,8 +1505,8 @@ get_seg_fparams <- function(dem,
   startAlt<-p$launchAltitude
   seg  <- sp_line(c(start[1],target[1]),c(start[2],target[2]),"seg",runDir=runDir)
   seg_utm <- sp::spTransform(seg,CRSobj =  paste0("+proj=utm +zone=",long2UTMzone(seg@bbox[1])," +datum=WGS84"))
-  seg_buf<-rgeos::gBuffer(spgeom = seg_utm,width = 5.0)
-  seg_buf <- sp::spTransform(seg_buf,CRSobj = "+proj=longlat +datum=WGS84 +no_defs" )
+  seg_buf<- sf::st_buffer(seg_utm,dist = 5.0) #rgeos::gBuffer(spgeom = seg_utm,width = 5.0)
+  seg_buf <- sf::st_transform(seg_buf,crs = 4326) #sp::spTransform(seg_buf,CRSobj = "+proj=longlat +datum=WGS84 +no_defs" )
   # calculate minimum rth altitude for each line by identifing max altitude
   seg_flight_altitude  <- raster::extract(dem,seg_buf, fun = max,na.rm = TRUE,layer = 1, nl = 1) - startAlt + as.numeric(p$flightAltitude)
   
@@ -1528,8 +1535,9 @@ get_point_fparams <- function(dem,
   startAlt<-p$launchAltitude
   seg  <- sp_point(point[1],point[2],"point")
   seg_utm <- sp::spTransform(seg,CRSobj =  paste0("+proj=utm +zone=",long2UTMzone(seg@bbox[1])," +datum=WGS84"))
-  seg_buf<-rgeos::gBuffer(spgeom = seg_utm,width = radius)
-  seg_buf <- sp::spTransform(seg_buf,CRSobj = "+proj=longlat +datum=WGS84 +no_defs" )
+  seg_buf<- sf::st_buffer(seg_utm,dist = radius) #seg_buf<-rgeos::gBuffer(spgeom = seg_utm,width = radius)
+  seg_buf <- sf::st_transform(seg_buf,crs = 4326) #sp::spTransform(seg_buf,CRSobj = "+proj=longlat +datum=WGS84 +no_defs" )
+  
   # calculate minimum rth altitude for each line by identifing max altitude
   seg_flight_altitude  <- raster::extract(dem,seg_buf, fun = max,na.rm = TRUE,layer = 1, nl = 1) - startAlt + as.numeric(p$aboveTreeAlt)
   

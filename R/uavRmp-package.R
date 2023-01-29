@@ -19,9 +19,19 @@
 #' @importFrom geosphere bearing
 #' @importFrom geosphere distGeo
 #' @importFrom geosphere destPoint
+#' @importFrom methods as
 #' @import log4r
 #' @keywords package
 #' 
+NULL
+#' DJI image of a survey flight
+#' @docType data
+#' @name tutdata_dji
+#' @title DJI image of a survey flight
+#' @description DJI image of a survey flight
+#' @format `"raster::raster"`
+#' @keywords datasets
+#' @source `Faculty of Geography UAV derived data from Marburg University Forest first campaign`
 NULL
 #' DEM data set of Marburg-Biedenkopf
 #' @docType data
@@ -71,7 +81,7 @@ NULL
 
 #' Flight area planning Qgroundcontrol survey data 
 #' @docType data
-#' @name qgc_survey
+#' @name tutdata_qgc_survey
 #' @title Flight area planning Qgroundcontrol survey data 
 #' @description Flight area planning example data as typically needed for planning an autonomous survey flight task. The task is planned with the QGroundcontrol survey tool.
 #' @keywords datasets
