@@ -77,7 +77,7 @@ HTMLWidgets.widget({
      "opacity": x.opacity
    };
    // define a dummy layer for the geojson data
-    //var myLayer = L.geoJson(undefined,{style:style,onEachFeature:onEachFeature}).addTo(map);
+   var myLayer = L.geoJson(undefined,{style:style,onEachFeature:onEachFeature}).addTo(map);
   
    var feature = {
     "type": "Feature",
@@ -186,10 +186,24 @@ HTMLWidgets.widget({
 };
    // create geojsonlayer
    if (x.overlay == 1) {
-   var polyLayer = L.Proj.geoJson(jsondata,{ pointToLayer: function (feature, latlng) {
-        return L.circleMarker(latlng, geojsonMarkerOptions);
-    },style:style,onEachFeature:onEachFeature})
-    
+       var polyLayer = geojsonLayer = L.geoJson(jsondata, {
+    style: function(feature) {
+        return {
+        	color: "black",
+        	opacity: 0.3,
+        	weight: 1.5,
+        };
+    },
+    pointToLayer: function(feature, latlng) {
+        return new L.CircleMarker(latlng, {
+        	radius: 3, 
+        	weight: 0.35,
+        	fillOpacity: 0.35,
+        	fillColor: "grey"
+        	
+        });
+    }
+});   
        var overlayLayers = {};
       overlayLayers['userOverlay'] = polyLayer;
 
@@ -282,13 +296,13 @@ HTMLWidgets.widget({
 
     //  <span style="font: 15px " class="star" >&#x2704;</span>
     //'<span style="font-size: 20px" class="glyphicon glyphicon-download"></span>'
-         L.easyButton(  '<span style="font-size: 5px font-weight:bold" class="glyphicon glyphicon-download"> JS</span>',
-         function(){
-           var data = drawnItems.toGeoJSON();
+     //    L.easyButton(  '<span style="font-size: 5px font-weight:bold" class="glyphicon glyphicon-download"> JS</span>',
+//         function(){
+//           var data = drawnItems.toGeoJSON();
            // Stringify the GeoJson
-           var convertedData = JSON.stringify(data);
+//           var convertedData = JSON.stringify(data);
            // Create ajax export using download.js
-           download(new Blob([convertedData]), "dlTextBlob.txt", "text/plain");}).addTo(map);
+//           download(new Blob([convertedData]), "dlTextBlob.txt", "text/plain");}).addTo(map);
      
      
 
@@ -306,7 +320,7 @@ HTMLWidgets.widget({
         //document.getElementById("coords").innerHTML = '<div class="coords"' + grabstring + '"</div>"' 
         $('#coords').text( convertedData );
         //window.alert(grabstring);}).addTo(map);
-       download(new Blob([kml]), "dlTextBlob.txt", "text/plain");}).addTo(map);
+       download(new Blob([kml]), "flightarea.kml", "text/plain");}).addTo(map);
       //}
 
   // grab the lnlt div and put the mousmove output there

@@ -1,15 +1,12 @@
 library(uavRmp)
-fp = makeAP(projectDir = "~/Schreibtisch/forgenius/",
-            surveyArea="~/Schreibtisch/forgenius/lacanau_all_yuneec.plan",
-            useMP = TRUE,
-            demFn = "~/Schreibtisch/forgenius/lacanau-dem.tif",
-            noFiles = 1,
-            followSurface = T,
-            horizonFilter = 1,
-            followSurfaceRes = 1,
-            flightAltitude = 70,
-            altFilter = 0.5,
-            cameraType ="dji4k",
+fp = makeAP(projectDir = "/media/creu/meta/forgenius-pn/",
+            surveyArea="/media/creu/meta/forgenius-pn/test04.plan",
+            useMP = T,
+            demFn = "/media/creu/meta/forgenius-pn/dsm.tif",
+            noFiles = 1,flightAltitude = 15,
+            followSurface = T,followSurfaceRes = 3,horizonFilter = 3,
+            altFilter =0.9,
+            cameraType ="dji32",
             uavType = "dji_csv")    
 
 library(uavRmp)
@@ -27,27 +24,36 @@ fp = makeAP(projectDir = "~/Schreibtisch/MOF/",
             uavType = "dji_csv")    
 
 library(uavRmp)
-fp = makeAP(projectDir = "~/Schreibtisch/MOF/",
-            surveyArea="~/Schreibtisch/MOF/test-buche_35.plan.plan",
+fp = makeAP(projectDir = "~/Desktop/tmp",
+            surveyArea="~/Desktop/tmp/test.plan",
             useMP = TRUE,
-            demFn = "~/Schreibtisch/MOF/mr-dem.tif",
            noFiles=1,
-            followSurface = T,
-            horizonFilter = 1,
-            followSurfaceRes = 1,
-            flightAltitude = 35,
-            altFilter = 0.5,
-            cameraType ="MAPIR2",
-            uavType = "pixhawk")    
+           cameraType ="dji4k",
+           uavType = "dji_csv")    
 
 demFn <- system.file("extdata", "mrbiko.tif", package = "uavRmp")
-tutorial_flightArea <- system.file("extdata", "qgc_survey.plan", package = "uavRmp")
-fp <- makeAP(surveyArea=tutorial_flightArea,
+tutorial_flightArea <- system.file("extdata", "tutdata_qgc_survey.plan", package = "uavRmp")
+fp <- makeAP(projectDir = "~/Desktop/tmp",
+             surveyArea="~/Desktop/tmp/DJI_2_06gsd_OFM_grass.plan",
              useMP = TRUE,
              noFiles = 1,
              followSurface = TRUE,
+             demFn = "~/Desktop/tmp/DSM_MOF_4326.tif",
+
+             cameraType ="YUN90",
+             uavType = "pixhawk", 
+             above_ground = FALSE)
+
+demFn <- system.file("extdata", "mrbiko.tif", package = "uavRmp")
+tutorial_flightArea <- system.file("extdata", "tutdata_qgc_survey30m.plan", package = "uavRmp")
+fp <- makeAP(projectDir = tempdir(),
+             surveyArea = tutorial_flightArea,
+             useMP = TRUE,
+             followSurfaceRes = 2, horizonFilter = 2, altFilter = 5,
+             
+             followSurface = TRUE,
+             above_ground = FALSE,
              demFn = demFn,
-             windCondition = 1,
-             uavType = "dji_csv",
-             followSurfaceRes = 5,
-             altFilter = .75)
+             uavType = "dji_csv" 
+)
+

@@ -5,12 +5,12 @@ knitr::opts_chunk$set(collapse = TRUE)
 require("knitr")
 knitr::opts_knit$set(root.dir = tempdir())
 
-## ---- eval=FALSE--------------------------------------------------------------
+## ----eval=FALSE---------------------------------------------------------------
 #     require(uavRmp)
 #     # get example DEM data
 #     fn <- system.file("extdata", "mrbiko.tif", package = "uavRmp")
 #     fa <- system.file("extdata", "flightarea.kml", package = "uavRmp")
-#     # preset = "uav" supress all not necessary tools
+#     # preset = "uav" suppress all not necessary tools
 #     vecDraw(mapCenter = c(50.855,8.691),preset="uav")
 #  
 #     # Use the digitized data (assumed to be named "firstSurvey.json")
@@ -19,7 +19,7 @@ knitr::opts_knit$set(root.dir = tempdir())
 #                  demFn = fn)
 #  
 
-## ---- eval=FALSE--------------------------------------------------------------
+## ----eval=FALSE---------------------------------------------------------------
 #   # load uavRmp
 #   require(uavRmp)
 #  
@@ -27,10 +27,7 @@ knitr::opts_knit$set(root.dir = tempdir())
 #   # see ?leafDraw for more information
 #   vecDraw(mapCenter = c(50.855,8.691),preset="uav")
 
-## ---- eval=FALSE--------------------------------------------------------------
-#   useMP = TRUE
-
-## ---- eval=FALSE--------------------------------------------------------------
+## ----eval=FALSE---------------------------------------------------------------
 #  
 #    # get example DEM data
 #   fn <- system.file("extdata", "mrbiko.tif", package = "uavRmp")
@@ -40,7 +37,7 @@ knitr::opts_knit$set(root.dir = tempdir())
 #              maxSpeed =35,
 #              demFn = fn)
 
-## ---- eval=FALSE--------------------------------------------------------------
+## ----eval=FALSE---------------------------------------------------------------
 #   require(mapview)
 #   mapview(fp[[5]],color="red", alpha.regions =0.1,lwd=0.5)+
 #   mapview(fp[[1]],lwd=1,cex=4)+

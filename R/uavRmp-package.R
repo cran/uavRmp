@@ -1,6 +1,6 @@
 #' The package provides some mission planning functionality for dealing with Unmanned Aerial Vehicles
 #'
-#' @description The package provides some mission planning functionality for dealing with Unmanned Aerial Vehicles. The focus is set on an easy to use workflow for planning autonomous obstacle avoiding surveys of rtf-UAVs to retrieve aerial or spot related data. It provides either intermediate flight control files for the DJI phantom x UAVs or ready to upload control files for the pixhawk based flightcontroller as used in the 3DR Solo. Additionally it contains some useful tools for digitizing and data manipulation.
+#' @description The package provides some mission planning functionality for dealing with Unmanned Aerial Vehicles. The focus is set on an easy to use workflow for planning autonomous obstacle avoiding surveys of rtf-UAVs to retrieve aerial or spot related data. It provides either intermediate flight control files for the DJI Litchi compatible UAVs or ready to upload control files for the pixhawk based flightcontroller as used in the Yuneec H520 or the outdated 3DR Solo. Additionally it contains some useful tools for digitizing and data manipulation.
 
 #' @note It is important to keep in mind that all auxilliary external binaries  like GDAL or SAGA need to be installed properly.
 #' correctly on your system. 
@@ -21,15 +21,18 @@
 #' @importFrom geosphere destPoint
 #' @importFrom methods as
 #' @import log4r
-#' @keywords package
-#' 
+#' @import dplyr
+#' @import sf
+#' @keywords internal
+#' @aliases uavRmp-package
+"_PACKAGE"
 NULL
 #' DJI image of a survey flight
 #' @docType data
 #' @name tutdata_dji
 #' @title DJI image of a survey flight
 #' @description DJI image of a survey flight
-#' @format `"raster::raster"`
+#' @format `"terra::rast"`
 #' @keywords datasets
 #' @source `Faculty of Geography UAV derived data from Marburg University Forest first campaign`
 NULL
@@ -38,7 +41,7 @@ NULL
 #' @name tutdata_dem
 #' @title DEM data set of Marburg-Biedenkopf
 #' @description DEM data set resampled to 20 m resolution
-#' @format `"raster::raster"`
+#' @format `"terra::rast"`
 #' @keywords datasets
 #' @source `Faculty of Geography UAV derived data from Marburg University Forest first campaign`
 NULL
@@ -79,10 +82,19 @@ NULL
 #' @source `Faculty of Geography Marburg`
 NULL
 
-#' Flight area planning Qgroundcontrol survey data 
+#' Flight area planning Qgroundcontrol survey data 100 m AGL
 #' @docType data
 #' @name tutdata_qgc_survey
-#' @title Flight area planning Qgroundcontrol survey data 
+#' @title Flight area planning Qgroundcontrol planning file for a 100m relative to launch survey flight using a GoPro Hero4
+#' @description Flight area planning example data as typically needed for planning an autonomous survey flight task. The task is planned with the QGroundcontrol survey tool.
+#' @keywords datasets
+#' @source `Faculty of Geography Marburg`
+NULL
+
+#' Flight area planning Qgroundcontrol survey data 30 m AGL
+#' @docType data
+#' @name tutdata_qgc_survey30m
+#' @title Flight area planning Qgroundcontrol planning file for a 30m follow terrain survey flight with the DJI Air 2S
 #' @description Flight area planning example data as typically needed for planning an autonomous survey flight task. The task is planned with the QGroundcontrol survey tool.
 #' @keywords datasets
 #' @source `Faculty of Geography Marburg`

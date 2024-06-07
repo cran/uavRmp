@@ -26,13 +26,13 @@ makeAP(
   windCondition = 0,
   uavType = "pixhawk",
   cameraType = "MAPIR2",
+  buf_mult = 1.5,
   cmd = 16,
   uavViewDir = 0,
   maxwaypoints = 9999,
-  above_ground = TRUE,
+  above_ground = FALSE,
   djiBasic = c(0, 0, 0, -90, 0),
   dA = FALSE,
-  heatMap = FALSE,
   picFootprint = FALSE,
   rcRange = NULL,
   copy = FALSE,
@@ -71,7 +71,7 @@ Further explanation at seealso}
 
 \item{noFiles}{manual split number of files}
 
-\item{altFilter}{if \code{followingTerrain} is equal \code{TRUE} then
+\item{altFilter}{if \code{followSurface} is equal \code{TRUE} then
 \code{altFilter} is the threshold value of accepted altitude difference (m) between two way points.
 If this value is not exceeded, the way point is omitted due to the fact that only 99 way points per mission are allowed.}
 
@@ -86,7 +86,7 @@ If this value is not exceeded, the way point is omitted due to the fact that onl
 \cr
 Options are:
 \code{"simple_ortho"} takes one picture/way point,
-\code{"multi_ortho"} takes 4 picture at a waunable to find an inherited method for function ‘makeAP’ for signature ‘"missing"’unable to find an inherited method for function ‘makeAP’ for signature ‘"missing"’ypoint, two vertically down and two in forward and backward viewing direction and an Angele of -60deg,
+\code{"multi_ortho"} takes 4 picture at a waypoint, two vertically down and two in forward and backward viewing direction and an angle of -60deg,
 \code{"simple_pano"} takes a 360 deg panorama picture and
 \code{"remote"} which assumes that the camera is controlled by the remote control (RC)}
 
@@ -100,17 +100,19 @@ Options are:
 
 \item{windCondition}{1= calm 2= light air 1-5km/h, 3= light breeze 6-11km/h, 4=gentle breeze 12-19km/h 5= moderate breeze 20-28km/h}
 
-\item{uavType}{type of uav. currently "dji_csv" and "solo" are supported}
+\item{uavType}{type of UAV. currently "dji_csv" for Litchi CSV export and "pixhawk" for MAVlink compatible flightplans are supported}
 
-\item{cameraType}{depending on uav system for dji the dji4k is default for solo you can choose GP3_7MP GP3_11MP and MAPIR2}
+\item{cameraType}{depending on the UAV Platform and integrated camera choose for DJI Mini 1/2/3, Phantom 3/Phantom 4 , Inspire 1) the \code{dji43}  and for the DJI Air 2S the \code{dji32} tag. For GoPro action cams on whatever aircraft you can choose \code{GP3_7MP} or \code{GP3_11MP}. Flying the Mapir 2 camera choose  \code{MAPIR2}. For the E90X camera of Yuneec you choose \code{YUN90}. Please note the calculation of the flight pathes is done via the ratio of vertical and horizontal resolution of the camera in the NON 16:9 and Landscape Modus.}
+
+\item{buf_mult}{multiplier for defining the zone in which the waypoints  are assumed to be turning waypoints according to  buf_mult * \code{followSurfaceRes}}
 
 \item{cmd}{mavlink command}
 
-\item{uavViewDir}{dview direction of uav}
+\item{uavViewDir}{view direction of uav}
 
 \item{maxwaypoints}{maximal number of waypoints for Litchi default is 90}
 
-\item{above_ground}{Litchi setting if the waypoint altitudes are interpreted as AGL default = TRUE}
+\item{above_ground}{Litchi setting if the waypoint altitudes are interpreted as AGL default = FALSE}
 
 \item{djiBasic}{c(0,0,0,-90)
 \cr curvesize (DJI only) controls the curve angle of the uav passing way points.
@@ -126,8 +128,6 @@ By default it is set to (\verb{= 0.0}).
 \code{uavViewDir} viewing direction of camera default is \code{0}}
 
 \item{dA}{if TRUE the real extent of the used DEM is returned helpful for low altitudes flight planning}
-
-\item{heatMap}{switch for calculating the overlapping factor on a raster map}
 
 \item{picFootprint}{switch for calculating the footprint at all way points}
 
@@ -181,7 +181,6 @@ and even if it is running like a charm, keep alert!
 # fp      optimized footprints of the camera
 # fA      flight area with at least 2 overlaps
 # rcA     area covered by the RC according to the range and line of sight
-# hm      a heatmap abundance of pictures/pixel (VERY SLOW, only if heatMap = TRUE)
 
 ## for visualisation and vecDraw load mapview
 require(mapview)
@@ -201,24 +200,33 @@ fp <- makeAP(surveyArea = tutorial_flightArea,
 ##     You have to use a high quality high resulution DSM
 ##     (here simulated with a standard DEM)
 
+fp <- makeAP(surveyArea=tutorial_flightArea,
+          followSurface = TRUE,
+          flightAltitude = 45,
+          demFn = demFn,
+          windCondition = 1,
+          uavType = "dji_csv",cameraType = "dji32",
+          followSurfaceRes = 5,
+          altFilter = .75)
 
 
 ## (4) typical real case scenario (2)
 ##     A flight altitudes BELOW 50 m is ambitious and risky
-##     You have to use a high quality high resulution DSM
+##     You have to use a high quality high resolution DSM
 ##     (here simulated with a standard DEM)
-##     This examples uses a flight planning from the QGroundcotrol Survey planning tool
-##     It also used the all calculations for camera flight speed etc.
+##     NOTE All settings are taken from QGroundcontrol so adapt the survey settings according 
+##          to "calc above terain" and use the "YUN90" camera tag for camera flight speed etc.
 ##     NOTE EXPERIMENTAL 
 
 demFn <- system.file("extdata", "mrbiko.tif", package = "uavRmp")
-tutorial_flightArea <- system.file("extdata", "qgc_survey.plan", package = "uavRmp")
+tutorial_flightArea <- system.file("extdata", "tutdata_qgc_survey.plan", package = "uavRmp")
 fp <- makeAP(surveyArea=tutorial_flightArea,
             useMP = TRUE,
             followSurface = TRUE,
             demFn = demFn,
             windCondition = 1,
             uavType = "pixhawk",
+            cameraType = "YUN90",
             followSurfaceRes = 5,
              altFilter = .75)
 
@@ -230,11 +238,12 @@ fp <- makeAP(surveyArea=tutorial_flightArea,
 ##     NOTE EXPERIMENTAL tested with DJI mavic mini 2
 
 demFn <- system.file("extdata", "mrbiko.tif", package = "uavRmp")
-tutorial_flightArea <- system.file("extdata", "qgc_survey.plan", package = "uavRmp")
+tutorial_flightArea <- system.file("extdata", "tutdata_qgc_survey.plan", package = "uavRmp")
 fp <- makeAP(surveyArea=tutorial_flightArea,
             useMP = TRUE,
             demFn = demFn,
             maxFlightTime = 25,
+            cameraType = "dji32",
             uavType = "dji_csv")
             
 ## call a simple shiny interface

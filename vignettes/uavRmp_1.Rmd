@@ -5,10 +5,10 @@ date: '`r Sys.Date()`'
 editor_options:
   chunk_output_type: console
 output:
-  html_document: 
-    theme: united
-    toc: yes
-  rmarkdown: default
+  # html_document: 
+  #   theme: united
+  #   toc: yes
+ # rmarkdown: default
   pdf_document:
     latex_engine: xelatex
     toc: yes
@@ -49,7 +49,7 @@ The ```uavRmd``` bridges this gap and generates ```MAVLINK``` format compliant m
 
 DJI: The reason using DJI UAVs is because of their absolute straightforward usage. Everybody can fly with a DJI but the price for this simplicity is a hermetically closed system. Only the Litchi app provides in addition to a cloud based mission planer an offline/standalone interface to upload a CSV formated way point file for autonomous flights to the Phantom.
 
-PixHawk/3DR Solo: The open UAV community is focused on the PixHawk autopilot unit and the Mission Planner software. It is well documented and several APIs are provided. Nevertheless a terrain following autonomous flight planning tool is not available. '''uavRst''' supports the ```MAVLINK``` common message format that can be uploaded directly on the Pixhawk controller using Ground Control Station software or the ```upload2Solo``` function.
+PixHawk: The open UAV community is focused on the PixHawk autopilot unit and the Mission Planner software. It is well documented and several APIs are provided. Nevertheless a terrain following autonomous flight planning tool is not available. '''uavRst''' supports the ```MAVLINK``` common message format that can be uploaded directly on the Pixhawk controller using Ground Control Station software or for the outdated 3DR Solo use the ```upload2Solo``` function.
 
 ## Installation
 
@@ -78,7 +78,7 @@ The basic idea is to provide an easy to use workflow for controlling rtf UAVs on
 
 ## The types of mission tasks
  
-To define a flight area you have to provide either 4 Points (or 3 lines). You may take more complex vectors like a multi point polygon, but only the first 4 coordinates x1, x2, x3 and x4 (the latter for the launching position) are used in exactly this order. If you take a rectangle the 4th corner coordinate will be the launching point. The concept is looking like the following sketch:
+To define a flight area you have to provide either 4 Points (or 3 lines). You may take more complex vectors like a multi point polygon, but only the first 4 coordinates x1, x2, x3 and x4 (the last one is assumed to be the launching position) are used in exactly this order. If you take a rectangle the 4th corner coordinate will be the launching point. The concept is looking like the following sketch:
     
     x2------x3           x2-------x1
     | a                 /
@@ -89,66 +89,74 @@ To define a flight area you have to provide either 4 Points (or 3 lines). You ma
    
 This coordinates the length of the line and the angle are used to calculate extend and parallels of the flight plan according to the flight altitude, overlap etc. NOTE: The flight direction depends on the order of the points. 
 
-If ```flightPlanMode = "tracks"```. The result look like below.
+If ```flightPlanMode = "tracks"```. The result may look like below.
 
-    #--#  #-->             #-----#
-    |  |  |               /    
+    #--#  #-->              #-----#
+    |  |  |                /        
+    |  |  |               /        
+    |  |  |              /    
     |  |  |              #-----#
     |  |  |                   /
-    #  #--#         <--#-----#
+    |  |  |                  /
+    |  |  |                 /    
+    #  #--#       <--#-----#
 
-If ```flightPlanMode = "waypoints"``` The result is an equal spatial distribution of way points:
+If ```flightPlanMode = "waypoints"``` Other than using tracks the result is an equal spatial distribution of way points:
  
-    #--#  #-->             #--#--#
-    |  |  |               /    
+    #--#  #-->              #--#--#
+    |  |  |                /
+    #  #  #               #    
+    |  |  |              /        
     #  #  #              #--#--#
     |  |  |                   /
-    #  #--#         <--#--#--#
+    #  #  #                  #
+    |  |  |                 /    
+    #  #--#       <--#--#--#
 
 ```waypoints``` is optimal for autonomous flights under calm conditions in complex terrain because the camera takes a picture at every way point.
 
 ```track``` is optimal for relatively plain areas and automatically triggered picture capturing 
- DJI only: Automatically picture capturing in a time interval works only within the range of the remote control because the UAV needs a trigger signal for taking pictures.
+ **NOTE;** DJI only: Automatically picture capturing in a time interval works only within the range of the remote control because the UAV needs a trigger signal for taking pictures.
  
 ## Terrain following task
 
- The argument ```followSurface = TRUE``` will switch from fixed AGL flight altitude into a terrain following flight altitude.
+ The argument ```followSurface = TRUE``` will switch from fixed AGL flight altitude to a terrain following flight altitude.
 
-NOTE: You have to be aware that the DJI UAV is calibrating the altitude at the launch position in the field! So you need either a correct coordinate altitude or a high resolution DEM to get a good(!) estimation of the launch position and altitude.
+**NOTE:** You have to be aware that by default the UAVs are calibrating the altitude at the launch position in the field! So you need either a correct coordinate altitude or a high resolution DEM to get a good(!) estimation of the launch position and altitude.
  
 You must choose a clearly defined and reliable launching position both in the map and the field. If one fails, we made the experience that the aircraft probably will hit the terrain...
 
  
 Let us assume a defined flight altitude of 50m. According to the launching point altitude the UAV will act like the following sketch shows:
 
-     ............... x_(uav)_x ........... UAV started at 30m altitude results in
-                                             a "real" flight altitude of 30m + 50m => 80m
+     x_()_x >>> ............................ UAV started at 30m altitude results in
+       ^                                     a "real" flight altitude of 30m + 50m => 80m
+       ^               ___60m____
+       ^              |          |
+       ^      30m _x__|          |
+       ^     ____|               |___
+     x_()_x_|                        |______
 
-                    ___60m____
-                   |          |
-           30m _x__|          |
-          ____|               |___
-      ___|                        |____
+                      ___60m____
+    x_()_x >>> ......|          |..........  UAV started at 0 m altitude results in
+      ^           ___|          |___          "real" flight altitude of 50m above 0m
+      ^          |                  |
+      ^      ____|                  |
+    x_()_x _|                       |_______
 
-                   ___60m____
-        ..........|          |............ UAV started at 0 m altitude results in
-               ___|          |___          "real" flight altitude of 50m above 0m
-          ____|                  |
-      ___|                       |__x__ 0m
-
-To avoid negative impacts from the Phantom 3 auto-calibration, the launch altitude is used to correct the flight altitude according to:
+To avoid negative impacts from the UAV auto-calibration, the launch altitude is used to correct the flight altitude according to:
 
      maximumAltitude_of_surveyArea + altitude_of_launchposition
    
 So the adapted flight altitude is always seen as the flight altitude above the highest terrain altitude:
 
-     ...................................... real altitude of UAV: 110m
-
-                   ___60m____
-                  |          |
-           30m _x_|          |___
-          ____|                  |
-      ___|                       |______
+          x_()_x >>> ..................... real altitude of UAV: 110m
+            ^
+            ^      ___60m____
+            ^     |          |
+        _ x_()_x__|   30m    |___
+    ____|                        |
+    |                            |______
 
 To get a fixed scale flight the launch altitude is used to correct the flight altitude according to:
 
@@ -176,7 +184,7 @@ This recipe deals with the effective and safe planning of an autonomous flight. 
 
 The basic workflow of planning a good aerial and target oriented flight mission. In the extended version you find some more explanations and hints for improving your planning. 
 
-Even if you can assume the use of uavs for autonomous flights as somehow “operational”, you should always keep in mind that avoiding negative impacts is a result of ￼responsible and focused planning.
+Even if you can assume the use of uavs for autonomous flights as somehow “operational”, you should always keep in mind that avoiding negative impacts is a result of responsible and focused planning.
 
      Please keep in mind that autonomous UAVs can harm the the pilot and environment. 
 
@@ -224,7 +232,7 @@ knitr::opts_knit$set(root.dir = tempdir())
    # get example DEM data
    fn <- system.file("extdata", "mrbiko.tif", package = "uavRmp")
    fa <- system.file("extdata", "flightarea.kml", package = "uavRmp")
-   # preset = "uav" supress all not necessary tools
+   # preset = "uav" suppress all not necessary tools
    vecDraw(mapCenter = c(50.855,8.691),preset="uav")
   
    # Use the digitized data (assumed to be named "firstSurvey.json")
@@ -276,17 +284,6 @@ For an optimal deliniation of the flight area, please keep in mind some hints:
 
 Finish digitizing and save it as a KML file. Take care to add the correct extensions  ''.kml'' (the ''makeAP()'' function is requiring the correct extension). In the current example save it as a kml file named ''firstSurvey.kml''.
 
-#### Missionplanner or Qgroundcontrol survey feature
-We want to plan a flight in a structured terrain in the upper Lahn-valley. Start the qGroundcontrol and navigate to Mission tab and open Pattern->Survey. Start digitizing a pattern as you want and also fill in the values on the right sided menus for camera angel overlap and so on. 
-![The first autonomous complex mission planned with QGroundcontrol](qcmission.png)
-
-Save this at an appropriate folder. To use this planning file you have to set in `makeAP` the switch:
-
-```{r, eval=FALSE}
- useMP = TRUE
-```
-
-
 
 ### Calling makeAP 
 
@@ -298,7 +295,7 @@ PLEASE NOTE: Optionally all used data files are copied to a folder called ''data
 
 The project structure will look like the figure.
 
-![Example of uavRmp folder structure](folderstructure.png)  
+![Example of uavRmp folder structure](https://gisma.github.io/uavRmp/articles/folderstructure.png)
 
 #### The used arguments
 
@@ -333,107 +330,4 @@ Using the ```mapview``` package  you can easily visualize the results. The below
  mapview(fp[[4]],color="darkblue", alpha.regions =0.1,lwd=0.5)
 ```
 
-![The first autonomous mission](simplemission.png)  
-
-### Export to the flight app 
-
-
-DJI:
-
-Open [Litchi Mission](https://flylitchi.com/) and click on the button ''Missions->Import'' and navigate to the control file firstSurvey_1001.csv. To export it click ''Missions->Save''. 
-
-Solo 
-```solo_upload("export_1001_solo.waypoints")```
-
-Ready to take off - that’s your first flight plan!
-
-# Field Guide
-
-## Planning your Survey
-
-It is most important that you setup your survey with an appropriate overlap for reliable stitching results. If the overlap is too small or vice versa you fly too fast you will get poor or no results. Same is with the flight altitude and the camera settings. Below you find suggested values.
-
-ASL Alt m|GP8MP3+ (cm)|GP12MP3+ (cm)|DJI P3 4K (cm)|MAPIR 2 (cm)
-------------- | ------------- | ------------- | ------------- | ------------- 
-15|1.08|0.9|0.63|0.56
-30|2.16|1.8|1.27|1.03
-75|5.4|4.5|3.2|2.53
-100|7.2|6.0|4.25|3.38
-Ground Resolution of typical cameras
-
-## Suggested Overlap
-
-Front Overlap 80%,  Side Overlap 60%
-
-## Camera Speed
-
-Depending on the product and manufactor of the cameras you have to deal with different speeds. NOTE: Only the speed that can be continously achieved is taken into account. Currently a picture rate of 2 sconds is the maximum in speed.
-
-**It is strongly recommended that you use (if available) an autonoumous camera timer (time lapse) for controlling the pictures interval.**
-
-## Flight Speed
-
-On average the fasted SD Cards will be able to achieve an average speed of about 2 seconds/JPEG (Raw + JPEG 3.5 seconds) image. As a result taking pictures every 2 seconds will be a sporty attempt. The Flight speed recommodations are meeting this needs. Let us assume you fly a task with the field of view (FOV) of the DJI 4K camera at 35 meters above ground level (AGL). To derive the maximum flight distance from picture to picture in meter for the given overlap you have to calculate:
-
-$FOV*agl*(1-overlap) = 1,71*35*0,2 = 12 m$ 
-
-If you can take a picture every 2 seconds your max speed is: $12 m / 2 s  = 6 m/s$
-
-## Rule of thumb
-
-For  JPG pictures: $0,15 * agl (RAW; 0,07 * agl)$
-For a 100 meter AGL flight you should set the speed to a maximum of:
- $0,15 * 100 = 15 m/s (54 km/h)$ 
-For a flight of 35m agl this is will be roughly 5,25 m/s
-## DEM/DSM Data
-If you fly in an wide open flat area you do not need additional data. But if you fly in middle range mountains, forests or similar complex structures you will need a digtal surface model (DSM/DEM) for retrieving an optimal and safe flight path. 
-
-## Weather
-Actually you also should check the weather.
-Forget about flying with wind speed above 4 Beaufort - the UAV is **not** a falcon.
-
-## Workflow in the field   
-1. Plan you r flight with an adequate planning tool at home and control it in the field (see examples, check your flightplan)
-2. Setup your Remote Controller 
-3. Setup your controlling device
-4. Setup your UAV
-5. Setup your safety system (use a parachute!)
-6. Setup your camera(s)
-7. Start RC
-8. Start UAV
-9. Start Camera 
-10. Load Task 
-11. Fly Task
-As simple this seems it is full of pitfalls. Therefore we would like to provide some checklist:
-
-## Pretask Check
-* UAV 
-    + batteries fully charged
-    + remote control charged 
-    + props 
-    + cables
-    + parachute
-    + cleanup MicroSD cards
-    + charge camera(s) 
-    + configure camera(s)
-    + charger
-    + minute book
-    + power bank
-
-* Tools
-    + Tools for the UAV
-    + Tape, glue etc.
-    + Table, chairs etc.
-
-* Survey
-    + Survey is checked
-    + Task is stored on controller (app)
-    + offline maps loaded
-
-* Legal stuff
-    + insurance valid
-    + common flight permission
-    + specific permissions
-    + necessary to inform flight security authorithy
-    + necessary to inform local air control
-
+![The first autonomous mission](https://gisma.github.io/uavRmp/articles/qcmission.png)  

@@ -1,14 +1,17 @@
 ## Unmanned Aerial Vehicle R based Mission Planning - uavRmp 
 
+<!-- badges: start -->
+[![cran
+checks](https://badges.cranchecks.info/worst/uavRmp.svg)](https://cran.r-project.org/web/checks/check_results_uavRmp.html)
+![monthly](https://cranlogs.r-pkg.org/badges/uavRmp)
+![total](https://cranlogs.r-pkg.org/badges/grand-total/uavRmp)
+[![CRAN](https://www.r-pkg.org/badges/version/uavRmp?color=009999)](https://cran.r-project.org/package=uavRmp)
+[![](https://img.shields.io/github/stars/gisma/uavRmp?style=flat)](https://github.com/gisma/uavRmp)
+[![License](https://img.shields.io/badge/license-GPL%20%28%3E=%203%29-lightgrey.svg?style=flat)](https://www.gnu.org/licenses/gpl-3.0.html)
+<!-- badges: end -->
 
-![](https://cranlogs.r-pkg.org/badges/grand-total/uavRmp?color=green)
-![](https://cranlogs.r-pkg.org/badges/uavRmp?color=green)
-![](https://cranlogs.r-pkg.org/badges/last-week/uavRmp?color=green)
-[![License](https://img.shields.io/badge/license-GPL%20%28%3E=%203%29-lightgrey.svg?style=flat)](http://www.gnu.org/licenses/gpl-3.0.html)
 
-
-
-The [uavRmp](https://github.com/gisma/uavRmp) package is designed for a lightweighted  uav autonomous mission planning including full documentation capabilities. In the first place it is a simple and open source planning tool for monitoring flights of low budget drones based on ```R```. It provide an easy workflow for planning autonomous 
+The [uavRmp](https://github.com/gisma/uavRmp) package is designed for a light weighted  uav autonomous mission planning including full documentation capabilities. In the first place it is a simple and open source planning tool for monitoring flights of low budget drones based on ```R```. It provide an easy workflow for planning autonomous 
 surveys including battery-dependent task splitting, save departures, and approaches of each monitoring chunks. 
 
 ## Introduction
@@ -19,21 +22,26 @@ The ```uavRmp``` bridges this gap  and  generates  ```MAVLINK``` format complian
 
 ## Supported UAV platforms
 
-Up to now the ```uavRmp``` package has been dedicated to low budget rtf-UAVs (ready-to-fly) as the DJI series that are supported by [Litchi](https://flylitchi.com/) and Pixhawk based platforms as the outdated but still running 3DR Solo. 
+Up to now the ```uavRmp``` package has been dedicated to low budget rtf-UAVs (ready-to-fly) as the DJI series that are supported by [Litchi](https://flylitchi.com/) and Pixhawk based platforms as the Yuneec UAVs or the outdated but still running 3DR Solo. 
 
-The core planning tool ```makeFP``` (make flight plan) creates either intermediate flight control files for the DJI UAVs or ready to upload control files for the 3DR Solo. 
+The core planning tool ```makeAP``` (make arial flight plan) creates either intermediate flight control files for the DJI UAVs or waypoint files for the PixHawk family. Furthermore the option `useMP` unifies flight planning for PixHawk based platforms and DJI consumer drones.  as it offers an easy conversion of surveys planned with `QgroundContro`l into the format readable by Litchi.  
 
-**NOTE:** The DJI control files are designed for using with the proprietary `Litchi` flight control app exchange format, while the 3DR Solo files are using the ```MAVLINK``` common message format, that is used by the PixHawk flight controller family.
+## News
+
+**NOTE:** The Litchi export for DJI Consumer drones is significantly improved now. For details have a look at the vignette.  
+
+**NOTE:** Starting with Version 0.6.3 the `raster` package is removed and you need to provide the `terra` package `SpatRaster` format only.
 
 **NOTE:** You may use now the survey planning tool of `QGroundControl` or `Missionplanner` and convert it either to DJI compatible Litchi format or MavLink files. Both with safe flights to the mission start and RTH as well as task splitting. You will find an simple GUI interface calling `shiny::runApp(system.file("shiny/plan2litchi/", "/app.R", package = "uavRmp"))`.
+
+**NOTE:** The DJI control files are designed for using with the proprietary `Litchi` flight control app exchange format, while the PixHawk/3DR Solo files are using the ```MAVLINK``` common message format, that is used by the PixHawk flight controller family.
+
 
 
 
 ## Installation
 
-The easiest way to obtain a fairly good runtime enviroment is to setup Linux as a dual boot system or in a VB. For using some of the the Solo related functions you need to install the python libs in addition.
-
-A full list of necessary libraries and binaries beyond ```R``` will soon be provided.
+You need GDAL to be installed.  For using some of the the 3DR Solo related functions you need to install the python libs in addition.
 
 To install the most actual version do it from ```github```  you need to have installed the ```devtools``` package.
 

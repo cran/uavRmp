@@ -3,7 +3,7 @@
 \docType{data}
 \name{tutdata_qgc_survey}
 \alias{tutdata_qgc_survey}
-\title{Flight area planning Qgroundcontrol survey data}
+\title{Flight area planning Qgroundcontrol planning file for a 100m relative to launch survey flight using a GoPro Hero4}
 \source{
 \verb{Faculty of Geography Marburg}
 }
@@ -11,6 +11,6 @@
 Flight area planning example data as typically needed for planning an autonomous survey flight task. The task is planned with the QGroundcontrol survey tool.
 }
 \details{
-Flight area planning Qgroundcontrol survey data
+Flight area planning Qgroundcontrol survey data 100 m AGL
 }
 \keyword{datasets}
